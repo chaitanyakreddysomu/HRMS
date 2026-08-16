@@ -19,8 +19,8 @@ This is a Human Resource Management System (HRMS) built with the MERN stack (Mon
 ### Clone the Repository
 
 ```bash
-git clone https://github.com/chaitanyakreddysomu/Mern-Projects.git
-cd Mern-Projects
+git clone https://github.com/chaitanyakreddysomu/HRMS.git
+cd HRMS
 ```
 
 ### Prerequisites
