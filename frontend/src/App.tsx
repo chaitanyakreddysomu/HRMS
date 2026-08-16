@@ -12,6 +12,7 @@ import Payslips from "./pages/employee/Payslips";
 import Policies from "./pages/employee/Policies";
 
 import Notifications from "./pages/employee/Notifications";
+import ReferralsSection from "./pages/employee/Referrals";
 import Complaints from "./pages/employee/Complaints";
 
 import Home from "./pages/Home";
@@ -43,7 +44,9 @@ import AdminPolicies from "./pages/admin/Policies";
 import AdminNotifications from "./pages/admin/Notifications";
 import AdminBankDetails from "./pages/admin/BankDetails";
 import AdminLogs from "./pages/admin/Logs";
+import AdminReferrals from "./pages/admin/Referrals";
 import SalaryStructurePage from "./pages/admin/SalaryStructure";
+import Birthdays from "./pages/Birthdays";
 import Test from "./pages/Test";
 
 const router = createBrowserRouter(
@@ -61,7 +64,9 @@ const router = createBrowserRouter(
         <Route path="/payslips" element={<Payslips />} />
         <Route path="/policies" element={<Policies />} />
         <Route path="/notifications" element={<Notifications />} />
+        <Route path="/referrals" element={<ReferralsSection />} />
         <Route path="/complaints" element={<Complaints />} />
+        <Route path="/birthdays" element={<Birthdays />} />
 
         {/* Admin / HR Routes */}
         <Route path="/employees" element={<EmployeeManagement />} />
@@ -75,6 +80,7 @@ const router = createBrowserRouter(
         <Route path="/admin-attendance" element={<AdminAttendance />} />
         <Route path="/admin-leaves" element={<AdminLeaves />} />
         <Route path="/admin-holidays" element={<AdminHolidays />} />
+        <Route path="/admin-birthdays" element={<Birthdays />} />
         {/* Assuming AdminPayslips, HRPayroll, and EmployeeRequests are defined elsewhere or need to be imported */}
         <Route path="/admin-payslips" element={<AdminPayslips />} />
         <Route path="/admin-complaints" element={<AdminComplaints />} />
@@ -88,6 +94,7 @@ const router = createBrowserRouter(
         <Route path="/hr-notifications" element={<HRNotifications />} />
         <Route path="/hr-payslips" element={<HRPayslips />} />
         <Route path="/hr-holidays" element={<HRHolidays />} />
+        <Route path="/hr-birthdays" element={<Birthdays />} />
         <Route path="/hr-policies" element={<HRPolicies />} />
         <Route path="/attendance-admin" element={<AdminAttendance />} />
         <Route path="/leaves-admin" element={<AdminLeaves />} />
@@ -98,6 +105,7 @@ const router = createBrowserRouter(
         <Route path="/admin-notifications" element={<AdminNotifications />} />
         <Route path="/admin-bank-details" element={<AdminBankDetails />} />
         <Route path="/admin-logs" element={<AdminLogs />} />
+        <Route path="/admin-referrals" element={<AdminReferrals />} />
         <Route path="/admin-salary-structure" element={<SalaryStructurePage />} />
 
         {/* Fallback routes for other modules to be implemented */}

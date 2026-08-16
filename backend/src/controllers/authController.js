@@ -46,7 +46,7 @@ exports.login = async (req, res) => {
         const accessToken = jwt.sign(
             { id: user.id, role: user.role, name: user.name, mongoId: user._id },
             process.env.JWT_SECRET,
-            { expiresIn: '24h' }
+            { expiresIn: '1h' }
         );
 
         const refreshToken = jwt.sign(
@@ -67,7 +67,8 @@ exports.login = async (req, res) => {
                 role: user.role,
                 email: user.email,
                 avatar: user.avatar,
-                profileImage: user.profileImage
+                profileImage: user.profileImage,
+                dob: user.dob
             }
         });
     } catch (error) {
@@ -87,7 +88,7 @@ exports.refresh = async (req, res) => {
         const accessToken = jwt.sign(
             { id: decoded.id, role: decoded.role, name: decoded.name, mongoId: decoded.mongoId },
             process.env.JWT_SECRET,
-            { expiresIn: '15m' }
+            { expiresIn: '1h' }
         );
 
         res.json({ accessToken });

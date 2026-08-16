@@ -37,6 +37,8 @@ app.use('/api/complaints', require('./routes/complaints'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/logs', require('./routes/logs'));
 app.use('/api/ai', require('./routes/aiRoutes'));
+app.use('/api/birthdays', require('./routes/birthdayRoutes'));
+app.use('/api/referrals', require('./routes/referralRoutes'));
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

@@ -86,6 +86,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(null);
         localStorage.removeItem("hrms_user");
         localStorage.removeItem("token");
+        localStorage.removeItem("refresh_token");
     };
 
     return (

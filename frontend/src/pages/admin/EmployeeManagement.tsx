@@ -18,12 +18,13 @@ import {
 } from "@/components/ui/dialog";
 import type { User } from "@/types";
 
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 
 export default function AdminEmployeeManagement() {
     const navigate = useNavigate();
-    const [searchTerm, setSearchTerm] = useState("");
+    const [searchParams] = useSearchParams();
+    const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || "");
     const [statusFilter, setStatusFilter] = useState("Active");
     const [projectFilter, setProjectFilter] = useState("All");
     const [roleFilter, setRoleFilter] = useState("All");

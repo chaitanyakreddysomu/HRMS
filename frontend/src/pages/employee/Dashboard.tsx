@@ -210,14 +210,13 @@ export default function EmployeeDashboard() {
     };
 
     return (
-        <div className="space-y-10 animate-in fade-in duration-500">
-
-            {/* WELCOME */}
-            <div>
-                <h1 className="text-3xl font-bold text-foreground">
-                    Welcome, <span className="text-blue-500">{user?.name}</span> !
-                </h1>
-
+        <div className="space-y-6 animate-in fade-in duration-500">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h1 className="text-3xl font-bold text-foreground">
+                        Welcome, <span className="text-blue-500">{user?.name}</span> !
+                    </h1>
+                </div>
             </div>
 
             {/* SUMMARY */}
@@ -243,12 +242,10 @@ export default function EmployeeDashboard() {
             </div>
 
             {/* ATTENDANCE TRACKER */}
-            {/* ATTENDANCE TRACKER */}
             <Card className="border-l-4 border-l-blue-600 shadow-md bg-white">
                 <CardContent className="p-8">
                     <div className="flex flex-col md:flex-row justify-between items-center gap-6">
                         <div className="space-y-6 w-full">
-                            {/* Header */}
                             <div className="flex items-center gap-4">
                                 <div className="h-12 w-12 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-600/20">
                                     <Clock className="h-6 w-6 text-white" />
@@ -257,7 +254,6 @@ export default function EmployeeDashboard() {
                             </div>
 
                             <div className="flex flex-wrap gap-8">
-                                {/* Location Info */}
                                 <div className="flex items-center gap-3">
                                     <div className="h-8 w-8 rounded-full bg-blue-50 flex items-center justify-center">
                                         <MapPin className="h-4 w-4 text-blue-600" />
@@ -270,7 +266,6 @@ export default function EmployeeDashboard() {
                                     </div>
                                 </div>
 
-                                {/* Status Info */}
                                 {attendanceRecord && (
                                     <div className="flex items-center gap-3">
                                         <div className="h-8 w-8 rounded-full bg-blue-50 flex items-center justify-center">
@@ -289,7 +284,6 @@ export default function EmployeeDashboard() {
                             </div>
                         </div>
 
-                        {/* Button */}
                         <div className="w-full md:w-auto">
                             <Button
                                 size="lg"
@@ -307,7 +301,6 @@ export default function EmployeeDashboard() {
                         </div>
                     </div>
 
-                    {/* Stats (After Punch In) */}
                     {(isPunchedIn || isPunchedOut) && (
                         <div className="mt-8 pt-8 border-t grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in slide-in-from-top-2">
                             <StatCard
@@ -333,13 +326,9 @@ export default function EmployeeDashboard() {
                 </CardContent>
             </Card>
 
-            {/* BOTTOM SECTIONS */}
             <div className="grid gap-8 md:grid-cols-2">
-
-                {/* NOTIFICATIONS SECTION */}
                 <div className="space-y-4">
                     <h2 className="text-lg font-bold flex items-center gap-2 text-slate-800">
-                        {/* <Bell className="h-5 w-5 text-blue-600" /> */}
                         Recent Notifications
                     </h2>
                     <div className="space-y-3">
@@ -366,10 +355,8 @@ export default function EmployeeDashboard() {
                     </div>
                 </div>
 
-                {/* HOLIDAYS SECTION */}
                 <div className="space-y-4">
                     <h2 className="text-lg font-bold flex items-center gap-2 text-slate-800">
-                        {/* <CalendarDays className="h-5 w-5 text-teal-600" /> */}
                         Upcoming Holidays
                     </h2>
                     <div className="space-y-4">
@@ -378,12 +365,8 @@ export default function EmployeeDashboard() {
                         ) : (
                             holidays.map((item, i) => {
                                 const d = new Date(item.startDate);
-                                const dateNum = d.getDate();
-                                const monthShort = d.toLocaleString('en-US', { month: 'short' }).toUpperCase();
-                                // Random color assignment based on index
                                 const colors = ["blue", "red", "amber", "purple"];
                                 const colorKey = colors[i % colors.length];
-
                                 const styleMap = {
                                     blue: { border: "border-l-blue-600", bg: "bg-blue-600", text: "text-blue-700", shadow: "shadow-lg shadow-blue-200" },
                                     red: { border: "border-l-red-600", bg: "bg-red-600", text: "text-red-700", shadow: "shadow-lg shadow-red-200" },
@@ -396,8 +379,8 @@ export default function EmployeeDashboard() {
                                     <Card key={i} className={`group border-l-4 ${style.border} shadow-sm p-4 hover:shadow-md transition-all cursor-pointer bg-white`}>
                                         <div className="flex items-center gap-4">
                                             <div className={`h-14 w-12 rounded-lg flex flex-col items-center justify-center text-white transition-transform duration-300 group-hover:scale-110 group-hover:-translate-y-1 ${style.bg} ${style.shadow}`}>
-                                                <span className="text-xl font-bold leading-none">{dateNum}</span>
-                                                <span className="text-[10px] font-bold uppercase leading-none mt-1">{monthShort}</span>
+                                                <span className="text-xl font-bold leading-none">{d.getDate()}</span>
+                                                <span className="text-[10px] font-bold uppercase leading-none mt-1">{d.toLocaleString('en-US', { month: 'short' }).toUpperCase()}</span>
                                             </div>
                                             <div>
                                                 <p className={`font-bold text-base ${style.text}`}>{item.name}</p>
@@ -412,89 +395,47 @@ export default function EmployeeDashboard() {
                         )}
                     </div>
                 </div>
-
             </div>
 
+            {/* Dialogs */}
             <Dialog open={!!selectedNotification} onOpenChange={(open) => !open && setSelectedNotification(null)}>
                 <DialogContent className="sm:max-w-md">
                     <DialogHeader>
                         <DialogTitle className="flex items-center justify-between gap-3 text-xl w-full">
                             <div className="flex items-center gap-3">
-                                <div className={cn(
-                                    "h-10 w-10 rounded-full flex items-center justify-center shrink-0 shadow-sm",
-                                    !selectedNotification?.read ? "bg-blue-100 text-blue-600" : "bg-gray-100 text-gray-500"
-                                )}>
+                                <div className={cn("h-10 w-10 rounded-full flex items-center justify-center shrink-0 shadow-sm",
+                                    !selectedNotification?.read ? "bg-blue-100 text-blue-600" : "bg-gray-100 text-gray-500")}>
                                     {selectedNotification?.type === 'alert' ? <AlertTriangle className="h-5 w-5" /> :
-                                        selectedNotification?.type === 'success' ? <CheckCircle2 className="h-5 w-5" /> :
-                                            <Info className="h-5 w-5" />}
+                                        selectedNotification?.type === 'success' ? <CheckCircle2 className="h-5 w-5" /> : <Info className="h-5 w-5" />}
                                 </div>
                                 <span>{selectedNotification?.title}</span>
-                                {selectedNotification?.source && (
-                                    <span className="text-[10px] font-medium text-muted-foreground">
-                                        From {selectedNotification.source}
-                                    </span>
-                                )}
                             </div>
-                            <div className="flex flex-col items-end gap-1">
-                                <span className={cn(
-                                    "text-xs font-normal whitespace-nowrap shrink-0",
-                                    !selectedNotification?.read ? "text-blue-600" : "text-gray-500"
-                                )}>
-                                    {selectedNotification?.date && formatDistanceToNow(new Date(selectedNotification.date), { addSuffix: true })}
-                                </span>
-
-                            </div>
+                            <span className="text-xs font-normal text-gray-500">
+                                {selectedNotification?.date && formatDistanceToNow(new Date(selectedNotification.date), { addSuffix: true })}
+                            </span>
                         </DialogTitle>
                         <DialogDescription className="pt-4">
-                            <div className={cn(
-                                "text-sm leading-relaxed p-4 rounded-lg border",
-                                !selectedNotification?.read
-                                    ? "bg-blue-50 border-blue-100 text-foreground"
-                                    : "bg-gray-50 border-gray-200 text-muted-foreground"
-                            )}>
+                            <div className="text-sm leading-relaxed p-4 rounded-lg border bg-blue-50 border-blue-100">
                                 {selectedNotification?.message}
                             </div>
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="flex justify-end gap-2">
-                        {/* <Button variant="outline" onClick={() => setSelectedNotification(null)}>Close</Button> */}
-                        {!selectedNotification?.read && (
-                            <Button className="bg-blue-600 text-white hover:bg-blue-700">Mark as Read</Button>
-                        )}
-                    </div>
                 </DialogContent>
             </Dialog>
 
-            {/* LOCATION PERMISSION DIALOG */}
             <Dialog open={showLocationDialog} onOpenChange={setShowLocationDialog}>
                 <DialogContent className="sm:max-w-md">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-red-600">
-                            <MapPin className="h-5 w-5" />
-                            Location Access Required
+                            <MapPin className="h-5 w-5" /> Location Access Required
                         </DialogTitle>
                         <DialogDescription className="pt-4 space-y-3">
-                            <p className="text-slate-700">
-                                To mark your attendance, we need access to your current location.
-                            </p>
-                            <div className="bg-slate-50 p-3 rounded-lg border text-xs text-slate-600 space-y-1">
-                                <p className="font-semibold">If you don't see the browser popup:</p>
-                                <ul className="list-disc pl-4 space-y-1">
-                                    <li>Check your browser's address bar for a blocked location icon.</li>
-                                    <li>Click it and select <strong>"Allow"</strong> or <strong>"Always allow"</strong>.</li>
-                                    <li>Refresh the page and try Punching In again.</li>
-                                </ul>
-                            </div>
+                            <p className="text-slate-700">To mark your attendance, we need access to your location.</p>
                         </DialogDescription>
                     </DialogHeader>
                     <div className="flex justify-end gap-2">
                         <Button variant="outline" onClick={() => setShowLocationDialog(false)}>Close</Button>
-                        <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => {
-                            setShowLocationDialog(false);
-                            handlePunch();
-                        }}>
-                            Try Again
-                        </Button>
+                        <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => { setShowLocationDialog(false); handlePunch(); }}>Try Again</Button>
                     </div>
                 </DialogContent>
             </Dialog>
@@ -502,72 +443,23 @@ export default function EmployeeDashboard() {
     );
 }
 
-/* ======================
-   COMPONENTS
-   ====================== */
-
-function StatCard({
-    title,
-    value,
-    color,
-    icon: Icon,
-}: {
-    title: string;
-    value: string;
-    color: "blue" | "green" | "orange" | "indigo" | "pink" | "cyan";
-    icon: LucideIcon;
-}) {
-    const styles = {
-        blue: {
-            border: "border-l-blue-500",
-            text: "text-blue-600",
-            bg: "bg-blue-50/50",
-            iconBg: "bg-blue-500 shadow-blue-200",
-        },
-        green: {
-            border: "border-l-green-500",
-            text: "text-green-600",
-            bg: "bg-green-50/50",
-            iconBg: "bg-green-600 shadow-green-200",
-        },
-        orange: {
-            border: "border-l-orange-500",
-            text: "text-orange-600",
-            bg: "bg-orange-50/50",
-            iconBg: "bg-orange-500 shadow-orange-200",
-        },
-        indigo: {
-            border: "border-l-indigo-500",
-            text: "text-indigo-600",
-            bg: "bg-indigo-50/50",
-            iconBg: "bg-indigo-500 shadow-indigo-200",
-        },
-        pink: {
-            border: "border-l-pink-500",
-            text: "text-pink-600",
-            bg: "bg-pink-50/50",
-            iconBg: "bg-pink-500 shadow-pink-200",
-        },
-        cyan: {
-            border: "border-l-cyan-500",
-            text: "text-cyan-600",
-            bg: "bg-cyan-50/50",
-            iconBg: "bg-cyan-500 shadow-cyan-200",
-        },
+function StatCard({ title, value, color, icon: Icon }: { title: string; value: string; color: string; icon: LucideIcon }) {
+    const styles: any = {
+        blue: { border: "border-l-blue-500", text: "text-blue-600", bg: "bg-blue-50/50", iconBg: "bg-blue-500" },
+        green: { border: "border-l-green-500", text: "text-green-600", bg: "bg-green-50/50", iconBg: "bg-green-600" },
+        orange: { border: "border-l-orange-500", text: "text-orange-600", bg: "bg-orange-50/50", iconBg: "bg-orange-500" },
+        indigo: { border: "border-l-indigo-500", text: "text-indigo-600", bg: "bg-indigo-50/50", iconBg: "bg-indigo-500" },
+        pink: { border: "border-l-pink-500", text: "text-pink-600", bg: "bg-pink-50/50", iconBg: "bg-pink-500" },
+        cyan: { border: "border-l-cyan-500", text: "text-cyan-600", bg: "bg-cyan-50/50", iconBg: "bg-cyan-500" },
     };
-
     const currentStyle = styles[color];
-
+    if (!currentStyle) return null;
     return (
         <Card className={`group border-l-4 shadow-sm hover:shadow-md transition-all ${currentStyle.bg} ${currentStyle.border}`}>
             <CardContent className="p-6 flex items-center justify-between">
                 <div>
-                    <CardTitle className={`text-xs font-bold uppercase tracking-wider mb-2 ${currentStyle.text}`}>
-                        {title}
-                    </CardTitle>
-                    <div className="text-2xl font-bold text-slate-800 tracking-tight">
-                        {value}
-                    </div>
+                    <CardTitle className={`text-xs font-bold uppercase tracking-wider mb-2 ${currentStyle.text}`}>{title}</CardTitle>
+                    <div className="text-2xl font-bold text-slate-800 tracking-tight">{value}</div>
                 </div>
                 <div className={`h-14 w-14 rounded-2xl flex items-center justify-center text-white shadow-lg transition-transform duration-300 group-hover:scale-110 ${currentStyle.iconBg}`}>
                     <Icon className="h-7 w-7" />

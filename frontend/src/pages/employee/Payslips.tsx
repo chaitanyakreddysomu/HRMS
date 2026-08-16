@@ -12,7 +12,8 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog";
 import { format, parseISO } from "date-fns";
-import icsLogo from "@/assets/ics_logo.jpeg";
+import logoInnerCircle from "@/assets/LOGOINNERCIRCLE-CU2q7XNW.jpeg";
+import enhancedLogo from "@/assets/enhanced_logo1.png";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 
@@ -332,97 +333,104 @@ export default function Payslips() {
                                             </DialogTrigger>
                                             <DialogContent className="max-w-3xl bg-white p-0 overflow-hidden">
                                                 {/* PREVIEW LIKE ADMIN */}
-                                                <div className="py-6 px-8 bg-white space-y-6 max-h-[90vh] overflow-y-auto">
-                                                    <div className="flex justify-between items-center border-b pb-4">
-                                                        <img src={icsLogo} alt="ICS Logo" className="h-16 w-auto object-contain" />
-                                                        <div className="text-right">
-                                                            <h2 className="text-2xl font-bold tracking-tight text-emerald-950">PAYSLIP</h2>
-                                                            <p className="text-muted-foreground uppercase text-xs tracking-[0.2em] mt-1">{fullSlip.month} {fullSlip.year}</p>
-                                                            {fullSlip.status === 'Draft' && <Badge variant="outline" className="mt-2 text-amber-600 border-amber-300 bg-amber-50">DRAFT PREVIEW</Badge>}
-                                                        </div>
-                                                    </div>
+                                                <div className="relative py-6 px-8 bg-white space-y-6 max-h-[90vh] overflow-y-auto">
+                                                    {/* WATERMARK */}
+                                                    {/* <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-50">
+                                                        <img src={enhancedLogo} alt="Watermark" className="w-[50%] h-auto object-contain opacity-15 mix-blend-multiply mt-48" />
+                                                    </div> */}
 
-                                                    <div className="grid grid-cols-2 gap-8 text-sm">
-                                                        <div>
-                                                            <p className="text-muted-foreground text-xs uppercase">Employee Details</p>
-                                                            <p className="font-bold text-lg mt-1">{fullSlip.name}</p>
-                                                            <p className="text-slate-600">{fullSlip.empId}</p>
-                                                            <p className="text-slate-600 mt-2">Designation: Software Engineer</p>
+                                                    <div className="relative z-10">
+                                                        <div className="flex justify-between items-center border-b pb-4">
+                                                            <img src={logoInnerCircle} alt="Inner Circle Logo" className="h-24 w-auto object-contain" />
+                                                            <div className="text-right">
+                                                                <h2 className="text-2xl font-bold tracking-tight text-emerald-950">PAYSLIP</h2>
+                                                                <p className="text-muted-foreground uppercase text-xs tracking-[0.2em] mt-1">{fullSlip.month} {fullSlip.year}</p>
+                                                                {fullSlip.status === 'Draft' && <Badge variant="outline" className="mt-2 text-amber-600 border-amber-300 bg-amber-50">DRAFT PREVIEW</Badge>}
+                                                            </div>
                                                         </div>
-                                                        <div className="text-right">
-                                                            <p className="text-muted-foreground text-xs uppercase">Pay Period</p>
-                                                            <p className="font-medium mt-1">{fullSlip.startDate || "-"} to {fullSlip.endDate || "-"}</p>
-                                                            <div className="flex gap-4 mt-2 justify-end">
-                                                                <div className="bg-slate-50 px-2 py-1 rounded border text-xs">
-                                                                    <span className="text-slate-500">Working Days:</span> <span className="font-semibold">{fullSlip.totalWorkingDays || 30}</span>
-                                                                </div>
-                                                                <div className="bg-slate-50 px-2 py-1 rounded border text-xs">
-                                                                    <span className="text-slate-500">Paid Days:</span> <span className="font-semibold text-emerald-600">{fullSlip.paidDays || 30}</span>
-                                                                </div>
-                                                                <div className="bg-red-50 px-2 py-1 rounded border border-red-100 text-xs">
-                                                                    <span className="text-red-500">Leaves:</span> <span className="font-semibold text-red-700">{fullSlip.leavesTaken || 0}</span>
+
+                                                        <div className="grid grid-cols-2 gap-8 text-sm">
+                                                            <div>
+                                                                <p className="text-muted-foreground text-xs uppercase">Employee Details</p>
+                                                                <p className="font-bold text-lg mt-1">{fullSlip.name}</p>
+                                                                <p className="text-slate-600">{fullSlip.empId}</p>
+                                                                <p className="text-slate-600 mt-2">Designation: Software Engineer</p>
+                                                            </div>
+                                                            <div className="text-right">
+                                                                <p className="text-muted-foreground text-xs uppercase">Pay Period</p>
+                                                                <p className="font-medium mt-1">{fullSlip.startDate || "-"} to {fullSlip.endDate || "-"}</p>
+                                                                <div className="flex gap-4 mt-2 justify-end">
+                                                                    <div className="bg-slate-50 px-2 py-1 rounded border text-xs">
+                                                                        <span className="text-slate-500">Working Days:</span> <span className="font-semibold">{fullSlip.totalWorkingDays || 30}</span>
+                                                                    </div>
+                                                                    <div className="bg-slate-50 px-2 py-1 rounded border text-xs">
+                                                                        <span className="text-slate-500">Paid Days:</span> <span className="font-semibold text-emerald-600">{fullSlip.paidDays || 30}</span>
+                                                                    </div>
+                                                                    <div className="bg-red-50 px-2 py-1 rounded border border-red-100 text-xs">
+                                                                        <span className="text-red-500">Leaves:</span> <span className="font-semibold text-red-700">{fullSlip.leavesTaken || 0}</span>
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         </div>
-                                                    </div>
 
-                                                    <div className="grid grid-cols-2 gap-px bg-slate-200 border rounded-lg overflow-hidden mt-4">
-                                                        <div className="bg-white p-4">
-                                                            <h4 className="font-bold text-emerald-700 mb-4 border-b pb-2">Earnings</h4>
-                                                            <div className="space-y-2 text-sm">
-                                                                <div className="flex justify-between">
-                                                                    <span>Basic Salary</span>
-                                                                    <span className="font-medium">₹ {(fullSlip.basicSalary || 0).toLocaleString()}</span>
+                                                        <div className="grid grid-cols-2 gap-px bg-slate-200 border rounded-lg overflow-hidden mt-4">
+                                                            <div className="bg-white p-4">
+                                                                <h4 className="font-bold text-emerald-700 mb-4 border-b pb-2">Earnings</h4>
+                                                                <div className="space-y-2 text-sm">
+                                                                    <div className="flex justify-between">
+                                                                        <span>Basic Salary</span>
+                                                                        <span className="font-medium">₹ {(fullSlip.basicSalary || 0).toLocaleString()}</span>
+                                                                    </div>
+                                                                    <div className="flex justify-between pt-2 border-t font-bold text-base">
+                                                                        <span>Gross Earnings</span>
+                                                                        <span>₹ {(fullSlip.basicSalary || 0).toLocaleString()}</span>
+                                                                    </div>
                                                                 </div>
-                                                                <div className="flex justify-between pt-2 border-t font-bold text-base">
-                                                                    <span>Gross Earnings</span>
-                                                                    <span>₹ {(fullSlip.basicSalary || 0).toLocaleString()}</span>
+                                                            </div>
+                                                            <div className="bg-white p-4">
+                                                                <h4 className="font-bold text-red-700 mb-4 border-b pb-2">Deductions</h4>
+                                                                <div className="space-y-2 text-sm">
+                                                                    <div className="flex justify-between">
+                                                                        <span>Provident Fund</span>
+                                                                        <span className="font-medium">₹ {(fullSlip.pf || 0).toLocaleString()}</span>
+                                                                    </div>
+                                                                    <div className="flex justify-between">
+                                                                        <span>ESI</span>
+                                                                        <span className="font-medium">₹ {(fullSlip.esi || 0).toLocaleString()}</span>
+                                                                    </div>
+                                                                    <div className="flex justify-between">
+                                                                        <span>Professional Tax</span>
+                                                                        <span className="font-medium">₹ {(fullSlip.pt || 0).toLocaleString()}</span>
+                                                                    </div>
+                                                                    <div className="flex justify-between">
+                                                                        <span>TDS</span>
+                                                                        <span className="font-medium">₹ {(fullSlip.tds || 0).toLocaleString()}</span>
+                                                                    </div>
+                                                                    <div className="flex justify-between text-red-600 font-medium bg-red-50 p-1 rounded">
+                                                                        <span>Leave Deduction ({fullSlip.leavesTaken || 0} days)</span>
+                                                                        <span>₹ {(fullSlip.leaveDeduction || 0).toLocaleString()}</span>
+                                                                    </div>
+                                                                    <div className="flex justify-between pt-2 border-t font-bold text-base">
+                                                                        <span>Total Deductions</span>
+                                                                        <span>₹ {((fullSlip.pf || 0) + (fullSlip.esi || 0) + (fullSlip.pt || 0) + (fullSlip.tds || 0) + (fullSlip.leaveDeduction || 0)).toLocaleString()}</span>
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         </div>
-                                                        <div className="bg-white p-4">
-                                                            <h4 className="font-bold text-red-700 mb-4 border-b pb-2">Deductions</h4>
-                                                            <div className="space-y-2 text-sm">
-                                                                <div className="flex justify-between">
-                                                                    <span>Provident Fund</span>
-                                                                    <span className="font-medium">₹ {(fullSlip.pf || 0).toLocaleString()}</span>
-                                                                </div>
-                                                                <div className="flex justify-between">
-                                                                    <span>ESI</span>
-                                                                    <span className="font-medium">₹ {(fullSlip.esi || 0).toLocaleString()}</span>
-                                                                </div>
-                                                                <div className="flex justify-between">
-                                                                    <span>Professional Tax</span>
-                                                                    <span className="font-medium">₹ {(fullSlip.pt || 0).toLocaleString()}</span>
-                                                                </div>
-                                                                <div className="flex justify-between">
-                                                                    <span>TDS</span>
-                                                                    <span className="font-medium">₹ {(fullSlip.tds || 0).toLocaleString()}</span>
-                                                                </div>
-                                                                <div className="flex justify-between text-red-600 font-medium bg-red-50 p-1 rounded">
-                                                                    <span>Leave Deduction ({fullSlip.leavesTaken || 0} days)</span>
-                                                                    <span>₹ {(fullSlip.leaveDeduction || 0).toLocaleString()}</span>
-                                                                </div>
-                                                                <div className="flex justify-between pt-2 border-t font-bold text-base">
-                                                                    <span>Total Deductions</span>
-                                                                    <span>₹ {((fullSlip.pf || 0) + (fullSlip.esi || 0) + (fullSlip.pt || 0) + (fullSlip.tds || 0) + (fullSlip.leaveDeduction || 0)).toLocaleString()}</span>
-                                                                </div>
-                                                            </div>
+
+                                                        <div className="bg-slate-50 p-4 rounded-lg flex flex-col items-end gap-1">
+                                                            <p className="text-xs text-muted-foreground uppercase tracking-wider">Net Pay</p>
+                                                            <p className="text-3xl font-bold text-emerald-700">₹ {fullSlip.netPay.toLocaleString()}</p>
+                                                            <p className="text-xs text-slate-500 italic mt-1">{numberToWords(fullSlip.netPay)}</p>
                                                         </div>
-                                                    </div>
 
-                                                    <div className="bg-slate-50 p-4 rounded-lg flex flex-col items-end gap-1">
-                                                        <p className="text-xs text-muted-foreground uppercase tracking-wider">Net Pay</p>
-                                                        <p className="text-3xl font-bold text-emerald-700">₹ {fullSlip.netPay.toLocaleString()}</p>
-                                                        <p className="text-xs text-slate-500 italic mt-1">{numberToWords(fullSlip.netPay)}</p>
-                                                    </div>
-
-                                                    <div className="flex justify-end pt-4 border-t">
-                                                        {isPaid && (
-                                                            <Button variant="outline" onClick={() => handleDownload(fullSlip)} className="gap-2">
-                                                                <Download className="h-4 w-4" /> Download PDF
-                                                            </Button>
-                                                        )}
+                                                        <div className="flex justify-end pt-4 border-t">
+                                                            {isPaid && (
+                                                                <Button variant="outline" onClick={() => handleDownload(fullSlip)} className="gap-2">
+                                                                    <Download className="h-4 w-4" /> Download PDF
+                                                                </Button>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </DialogContent>
@@ -437,85 +445,91 @@ export default function Payslips() {
             {/* HIDDEN PDF TEMPLATE */}
             {pdfData && (
                 <div style={{ position: "absolute", left: "-9999px", top: 0 }}>
-                    <div id="payslip-pdf-content" className="w-[800px] p-8 bg-white text-slate-900 border" style={{ fontFamily: "sans-serif" }}>
-                        {/* Header */}
-                        <div className="flex justify-between items-center border-b border-slate-300 pb-6 mb-6">
-                            <img src={icsLogo} alt="ICS Logo" className="h-20 w-auto object-contain" />
-                            <div className="text-right">
-                                <h2 className="text-3xl font-bold text-emerald-950">PAYSLIP</h2>
-                                <p className="text-slate-500 uppercase text-sm tracking-[0.2em] mt-1">{pdfData.month} {pdfData.year}</p>
-                            </div>
+                    <div id="payslip-pdf-content" className="relative w-[800px] p-8 bg-white text-slate-900 border" style={{ fontFamily: "sans-serif" }}>
+                        {/* WATERMARK */}
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-50">
+                            <img src={enhancedLogo} alt="Watermark" className="w-[50%] h-auto object-contain opacity-15 mix-blend-multiply" />
                         </div>
 
-                        {/* Details */}
-                        <div className="grid grid-cols-2 gap-8 text-sm mb-6">
-                            <div>
-                                <p className="text-slate-500 text-xs uppercase tracking-wider mb-1">Employee Details</p>
-                                <p className="font-bold text-xl text-slate-900">{pdfData.name}</p>
-                                <p className="text-slate-600 font-medium">{pdfData.empId}</p>
-                                <p className="text-slate-600 mt-2">Designation: Software Engineer</p>
-                            </div>
-                            <div className="text-right">
-                                <p className="text-slate-500 text-xs uppercase tracking-wider mb-1">Pay Period</p>
-                                <p className="font-medium text-slate-900">{pdfData.startDate || "-"} to {pdfData.endDate || "-"}</p>
-                                <div className="mt-2 space-y-1">
-                                    <p className="text-slate-600">Paid Days: <span className="font-semibold text-slate-900">{pdfData.paidDays || 30}</span></p>
-                                    <p className="text-slate-600">Leaves Taken: <span className="font-semibold text-red-600">{pdfData.leavesTaken || 0}</span></p>
+                        <div className="relative z-10">
+                            {/* Header */}
+                            <div className="flex justify-between items-center border-b border-slate-300 pb-6 mb-6">
+                                <img src={logoInnerCircle} alt="Inner Circle Logo" className="h-28 w-auto object-contain" />
+                                <div className="text-right">
+                                    <h2 className="text-3xl font-bold text-emerald-950">PAYSLIP</h2>
+                                    <p className="text-slate-500 uppercase text-sm tracking-[0.2em] mt-1">{pdfData.month} {pdfData.year}</p>
                                 </div>
                             </div>
-                        </div>
 
-                        {/* Table */}
-                        <div className="border border-slate-300 rounded-lg overflow-hidden mb-6">
-                            <div className="grid grid-cols-2 divide-x divide-slate-300">
-                                {/* Earnings */}
-                                <div className="p-0">
-                                    <div className="bg-emerald-50/50 p-3 border-b border-slate-300 font-bold text-emerald-800 uppercase text-xs tracking-wider">Earnings</div>
-                                    <div className="p-4 space-y-3">
-                                        <div className="flex justify-between text-sm">
-                                            <span className="text-slate-600">Basic Salary</span>
-                                            <span className="font-semibold">₹ {(pdfData.basicSalary || 0).toLocaleString()}</span>
-                                        </div>
-                                        <div className="flex justify-between text-sm pt-3 border-t border-slate-100 font-bold text-slate-900">
-                                            <span>Gross Earnings</span>
-                                            <span>₹ {(pdfData.basicSalary || 0).toLocaleString()}</span>
-                                        </div>
+                            {/* Details */}
+                            <div className="grid grid-cols-2 gap-8 text-sm mb-6">
+                                <div>
+                                    <p className="text-slate-500 text-xs uppercase tracking-wider mb-1">Employee Details</p>
+                                    <p className="font-bold text-xl text-slate-900">{pdfData.name}</p>
+                                    <p className="text-slate-600 font-medium">{pdfData.empId}</p>
+                                    <p className="text-slate-600 mt-2">Designation: Software Engineer</p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-slate-500 text-xs uppercase tracking-wider mb-1">Pay Period</p>
+                                    <p className="font-medium text-slate-900">{pdfData.startDate || "-"} to {pdfData.endDate || "-"}</p>
+                                    <div className="mt-2 space-y-1">
+                                        <p className="text-slate-600">Paid Days: <span className="font-semibold text-slate-900">{pdfData.paidDays || 30}</span></p>
+                                        <p className="text-slate-600">Leaves Taken: <span className="font-semibold text-red-600">{pdfData.leavesTaken || 0}</span></p>
                                     </div>
                                 </div>
-                                {/* Deductions */}
-                                <div className="p-0">
-                                    <div className="bg-red-50/50 p-3 border-b border-slate-300 font-bold text-red-800 uppercase text-xs tracking-wider">Deductions</div>
-                                    <div className="p-4 space-y-3">
-                                        {['pf', 'esi', 'pt', 'tds'].map(field => (
-                                            <div key={field} className="flex justify-between text-sm">
-                                                <span className="text-slate-600 uppercase">{field}</span>
-                                                <span className="font-medium">₹ {(pdfData[field as keyof Payslip] as number || 0).toLocaleString()}</span>
+                            </div>
+
+                            {/* Table */}
+                            <div className="border border-slate-300 rounded-lg overflow-hidden mb-6">
+                                <div className="grid grid-cols-2 divide-x divide-slate-300">
+                                    {/* Earnings */}
+                                    <div className="p-0">
+                                        <div className="bg-emerald-50/50 p-3 border-b border-slate-300 font-bold text-emerald-800 uppercase text-xs tracking-wider">Earnings</div>
+                                        <div className="p-4 space-y-3">
+                                            <div className="flex justify-between text-sm">
+                                                <span className="text-slate-600">Basic Salary</span>
+                                                <span className="font-semibold">₹ {(pdfData.basicSalary || 0).toLocaleString()}</span>
                                             </div>
-                                        ))}
-                                        <div className="flex justify-between text-sm">
-                                            <span className="text-slate-600">Leave Deduction</span>
-                                            <span className="font-medium">₹ {(pdfData.leaveDeduction || 0).toLocaleString()}</span>
+                                            <div className="flex justify-between text-sm pt-3 border-t border-slate-100 font-bold text-slate-900">
+                                                <span>Gross Earnings</span>
+                                                <span>₹ {(pdfData.basicSalary || 0).toLocaleString()}</span>
+                                            </div>
                                         </div>
-                                        <div className="flex justify-between text-sm pt-3 border-t border-slate-100 font-bold text-slate-900">
-                                            <span>Total Deductions</span>
-                                            <span>₹ {((pdfData.pf || 0) + (pdfData.esi || 0) + (pdfData.pt || 0) + (pdfData.tds || 0) + (pdfData.leaveDeduction || 0)).toLocaleString()}</span>
+                                    </div>
+                                    {/* Deductions */}
+                                    <div className="p-0">
+                                        <div className="bg-red-50/50 p-3 border-b border-slate-300 font-bold text-red-800 uppercase text-xs tracking-wider">Deductions</div>
+                                        <div className="p-4 space-y-3">
+                                            {['pf', 'esi', 'pt', 'tds'].map(field => (
+                                                <div key={field} className="flex justify-between text-sm">
+                                                    <span className="text-slate-600 uppercase">{field}</span>
+                                                    <span className="font-medium">₹ {(pdfData[field as keyof Payslip] as number || 0).toLocaleString()}</span>
+                                                </div>
+                                            ))}
+                                            <div className="flex justify-between text-sm">
+                                                <span className="text-slate-600">Leave Deduction</span>
+                                                <span className="font-medium">₹ {(pdfData.leaveDeduction || 0).toLocaleString()}</span>
+                                            </div>
+                                            <div className="flex justify-between text-sm pt-3 border-t border-slate-100 font-bold text-slate-900">
+                                                <span>Total Deductions</span>
+                                                <span>₹ {((pdfData.pf || 0) + (pdfData.esi || 0) + (pdfData.pt || 0) + (pdfData.tds || 0) + (pdfData.leaveDeduction || 0)).toLocaleString()}</span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
 
-                        {/* Net Pay */}
-                        <div className="bg-slate-50 p-6 rounded-lg border border-slate-200 flex flex-col items-end">
-                            <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Net Pay</p>
-                            <p className="text-4xl font-bold text-emerald-700">₹ {pdfData.netPay.toLocaleString()}</p>
-                            <p className="text-sm text-slate-500 italic mt-2">{numberToWords(pdfData.netPay)}</p>
-                        </div>
+                            {/* Net Pay */}
+                            <div className="bg-slate-50 p-6 rounded-lg border border-slate-200 flex flex-col items-end">
+                                <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Net Pay</p>
+                                <p className="text-4xl font-bold text-emerald-700">₹ {pdfData.netPay.toLocaleString()}</p>
+                                <p className="text-sm text-slate-500 italic mt-2">{numberToWords(pdfData.netPay)}</p>
+                            </div>
 
-                        {/* Footer */}
-                        <div className="mt-12 text-center text-xs text-slate-400">
-                            <p>This is a computer-generated document and does not require a signature.</p>
-                            <p className="mt-1">Generated on {pdfData.generatedOn}</p>
+                            {/* Footer */}
+                            <div className="mt-12 text-center text-xs text-slate-400">
+                                <p>This is a computer-generated document and does not require a signature.</p>
+                            </div>
                         </div>
                     </div>
                 </div>

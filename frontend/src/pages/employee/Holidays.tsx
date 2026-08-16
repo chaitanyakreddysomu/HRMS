@@ -17,6 +17,7 @@ import {
     startOfWeek,
     endOfWeek,
     parseISO,
+    isSameDay,
 } from "date-fns";
 import {
     ChevronLeft,
@@ -179,6 +180,7 @@ export default function Holidays() {
                             {totalDays.map((date, i) => {
                                 const events = getDayEvents(date);
                                 const isCurrent = isSameMonth(date, currentMonth);
+                                const isToday = isSameDay(date, new Date());
 
                                 const eventColor =
                                     events.length > 0
@@ -191,6 +193,7 @@ export default function Holidays() {
                                         className={cn(
                                             "h-12 flex items-center justify-center rounded-lg text-sm font-medium",
                                             !isCurrent && "text-muted-foreground",
+                                            isToday && "border-2 border-sky-500 text-sky-500 font-bold",
                                             eventColor && `${eventColor} text-white`
                                         )}
                                     >

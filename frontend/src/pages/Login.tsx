@@ -54,7 +54,7 @@ export function Login() {
 
             if (res.ok) {
                 localStorage.setItem('token', data.accessToken);
-                localStorage.setItem('refreshToken', data.refreshToken);
+                localStorage.setItem('refresh_token', data.refreshToken);
                 login(data.user.role || "EMPLOYEE", data.user);
                 navigate("/");
             } else {
@@ -192,7 +192,7 @@ export function Login() {
 
                             {/* MESSAGES */}
                             {errorMsg && (
-                                <div className="mb-6 p-4 bg-red-50 border border-red-100 text-red-600 rounded-lg text-sm font-medium animate-in fade-in slide-in-from-top-2 flex items-center gap-2">
+                                <div className="mb-6 p-4 bg-red-50 border border-red-100 text-red-600 rounded-lg text-sm font-medium animate-in fade-in slide-in-from-top-2 flex items-center gap-2" id="loginErrorMsg">
                                     <CheckCircle2 className="h-4 w-4 text-red-500 rotate-45" /> {errorMsg}
                                 </div>
                             )}
@@ -255,6 +255,7 @@ export function Login() {
                                         <Button
                                             className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-bold text-base shadow-lg shadow-blue-600/20 transition-all rounded-lg"
                                             type="submit"
+                                            id="signInBTN"
                                             disabled={isLoading}
                                         >
                                             {isLoading ? "Signing In..." : (

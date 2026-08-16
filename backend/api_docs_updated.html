@@ -430,6 +430,42 @@
                             <pre class="scrollable">{ "punchedIn": true, "punchedOut": false }</pre>
                         </td>
                     </tr>
+                    <tr>
+                        <td><span class="badge method-GET">GET</span></td>
+                        <td class="col-endpoint">/api/attendance/stats</td>
+                        <td>Attendance Stats</td>
+                        <td><span class="badge role-badge role-ALL">All</span></td>
+                        <td>
+                            <pre class="scrollable">None</pre>
+                        </td>
+                        <td>
+                            <pre class="scrollable">{ "present": 10, "absent": 2 }</pre>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge method-GET">GET</span></td>
+                        <td class="col-endpoint">/api/attendance</td>
+                        <td>Get Attendance</td>
+                        <td><span class="badge role-badge role-ALL">All</span></td>
+                        <td>
+                            <pre class="scrollable">None</pre>
+                        </td>
+                        <td>
+                            <pre class="scrollable">[ ... ]</pre>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge method-PATCH">PATCH</span></td>
+                        <td class="col-endpoint">/api/attendance/:id</td>
+                        <td>Update Attendance</td>
+                        <td><span class="badge role-badge role-ADMIN">Admin</span></td>
+                        <td>
+                            <pre class="scrollable">{ "status": "Leave" }</pre>
+                        </td>
+                        <td>
+                            <pre class="scrollable">{ "message": "Updated" }</pre>
+                        </td>
+                    </tr>
 
                     <!-- Complaints -->
                     <tr>
@@ -484,6 +520,42 @@
                         </td>
                         <td>
                             <pre class="scrollable">{ "read": true }</pre>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge method-POST">POST</span></td>
+                        <td class="col-endpoint">/api/notifications/register-fcm</td>
+                        <td>Register FCM Token</td>
+                        <td><span class="badge role-badge role-ALL">All</span></td>
+                        <td>
+                            <pre class="scrollable">{ "token": "fcm_token_here..." }</pre>
+                        </td>
+                        <td>
+                            <pre class="scrollable">{ "message": "FCM token registered" }</pre>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge method-GET">GET</span></td>
+                        <td class="col-endpoint">/api/notifications/check-fcm-status</td>
+                        <td>Check FCM Token</td>
+                        <td><span class="badge role-badge role-ALL">All</span></td>
+                        <td>
+                            <pre class="scrollable">None</pre>
+                        </td>
+                        <td>
+                            <pre class="scrollable">{ "hasToken": true }</pre>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge method-POST">POST</span></td>
+                        <td class="col-endpoint">/api/notifications/test-fcm</td>
+                        <td>Send Test FCM</td>
+                        <td><span class="badge role-badge role-ALL">All</span></td>
+                        <td>
+                            <pre class="scrollable">None</pre>
+                        </td>
+                        <td>
+                            <pre class="scrollable">{ "message": "Test notification sent" }</pre>
                         </td>
                     </tr>
                 </tbody>
@@ -1338,25 +1410,201 @@
                 </tbody>
             </table>
         </div>
-        const method = document.getElementById('methodFilter').value;
-        const rows = document.querySelectorAll('tbody tr');
 
-        rows.forEach(row => {
-        if (method === 'ALL') {
-        row.style.display = '';
-        return;
-        }
+        <!-- 6. AI MODULE -->
+        <h2>6. AI Module</h2>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th class="col-method">Method</th>
+                        <th class="col-endpoint">Endpoint</th>
+                        <th class="col-desc">Description</th>
+                        <th class="col-role">Allowed Roles</th>
+                        <th class="col-data">Body / Params</th>
+                        <th class="col-data">Response</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="badge method-POST">POST</span></td>
+                        <td class="col-endpoint">/api/ai/generate-leave</td>
+                        <td>Generate Leave Details via AI</td>
+                        <td><span class="badge role-badge role-ALL">All</span></td>
+                        <td>
+                            <pre class="scrollable">{ "prompt": "Need leave for 2 days for cousin's wedding" }</pre>
+                        </td>
+                        <td>
+                            <pre
+                                class="scrollable">{ "subject": "Leave Application", "reason": "...", "startDate": "...", "endDate": "..." }</pre>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge method-POST">POST</span></td>
+                        <td class="col-endpoint">/api/ai/generate-complaint</td>
+                        <td>Generate Complaint Details via AI</td>
+                        <td><span class="badge role-badge role-ALL">All</span></td>
+                        <td>
+                            <pre class="scrollable">{ "prompt": "Internet is too slow" }</pre>
+                        </td>
+                        <td>
+                            <pre
+                                class="scrollable">{ "subject": "Slow Internet", "description": "...", "category": "IT" }</pre>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
 
-        // Look for method badge inside the row
-        const methodBadge = row.querySelector('.badge');
-        if (methodBadge && methodBadge.textContent.trim() === method) {
-        row.style.display = '';
-        } else {
-        row.style.display = 'none';
+        <!-- 7. REFERRALS MODULE -->
+        <h2>7. Referrals Module</h2>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th class="col-method">Method</th>
+                        <th class="col-endpoint">Endpoint</th>
+                        <th class="col-desc">Description</th>
+                        <th class="col-role">Allowed Roles</th>
+                        <th class="col-data">Body / Params</th>
+                        <th class="col-data">Response</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="badge method-POST">POST</span></td>
+                        <td class="col-endpoint">/api/referrals/upload</td>
+                        <td>Upload Referral Resume</td>
+                        <td><span class="badge role-badge role-ALL">All</span></td>
+                        <td>
+                            <pre class="scrollable">FormData: document (file)</pre>
+                        </td>
+                        <td>
+                            <pre class="scrollable">{ "url": "...", "text": "parsed resume text" }</pre>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge method-POST">POST</span></td>
+                        <td class="col-endpoint">/api/referrals</td>
+                        <td>Create Referral</td>
+                        <td><span class="badge role-badge role-ALL">All</span></td>
+                        <td>
+                            <pre
+                                class="scrollable">{ "candidateName": "John", "position": "Dev", "resumeUrl": "..." }</pre>
+                        </td>
+                        <td>
+                            <pre class="scrollable">{ "message": "Created" }</pre>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge method-GET">GET</span></td>
+                        <td class="col-endpoint">/api/referrals/my</td>
+                        <td>My Referrals</td>
+                        <td><span class="badge role-badge role-ALL">All</span></td>
+                        <td>
+                            <pre class="scrollable">None</pre>
+                        </td>
+                        <td>
+                            <pre class="scrollable">[ ... ]</pre>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge method-GET">GET</span></td>
+                        <td class="col-endpoint">/api/referrals</td>
+                        <td>All Referrals</td>
+                        <td><span class="badge role-badge role-ADMIN">Admin</span> <span
+                                class="badge role-badge role-HR">HR</span></td>
+                        <td>
+                            <pre class="scrollable">None</pre>
+                        </td>
+                        <td>
+                            <pre class="scrollable">[ ... ]</pre>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge method-GET">GET</span></td>
+                        <td class="col-endpoint">/api/referrals/stats</td>
+                        <td>Referral Stats</td>
+                        <td><span class="badge role-badge role-ADMIN">Admin</span> <span
+                                class="badge role-badge role-HR">HR</span></td>
+                        <td>
+                            <pre class="scrollable">None</pre>
+                        </td>
+                        <td>
+                            <pre class="scrollable">{ "total": 10, "hired": 2 }</pre>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge method-PATCH">PATCH</span></td>
+                        <td class="col-endpoint">/api/referrals/:id</td>
+                        <td>Update Referral Status</td>
+                        <td><span class="badge role-badge role-ADMIN">Admin</span> <span
+                                class="badge role-badge role-HR">HR</span></td>
+                        <td>
+                            <pre class="scrollable">{ "status": "Interviewing" }</pre>
+                        </td>
+                        <td>
+                            <pre class="scrollable">{ "message": "Updated" }</pre>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 8. BIRTHDAYS MODULE -->
+        <h2>8. Birthdays Module</h2>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th class="col-method">Method</th>
+                        <th class="col-endpoint">Endpoint</th>
+                        <th class="col-desc">Description</th>
+                        <th class="col-role">Allowed Roles</th>
+                        <th class="col-data">Body / Params</th>
+                        <th class="col-data">Response</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="badge method-GET">GET</span></td>
+                        <td class="col-endpoint">/api/birthdays</td>
+                        <td>Today's Birthdays</td>
+                        <td><span class="badge role-badge role-ALL">All</span></td>
+                        <td>
+                            <pre class="scrollable">None</pre>
+                        </td>
+                        <td>
+                            <pre
+                                class="scrollable">[ { "name": "Alice", "department": "IT", "profileImage": "..." } ]</pre>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div> <!-- Close container -->
+
+    <script>
+        function filterTables() {
+            const method = document.getElementById('methodFilter').value;
+            const rows = document.querySelectorAll('tbody tr');
+
+            rows.forEach(row => {
+                if (method === 'ALL') {
+                    row.style.display = '';
+                    return;
+                }
+
+                // Look for method badge inside the row
+                const methodBadge = row.querySelector('.badge');
+                if (methodBadge && methodBadge.textContent.trim() === method) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
         }
-        });
-        }
-        </script>
+    </script>
 </body>
 
 </html>

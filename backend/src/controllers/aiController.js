@@ -1,6 +1,13 @@
-const { GoogleGenerativeAI } = require("@google/generative-ai");
+const OpenAI = require("openai");
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.trim() : "");
+const openai = new OpenAI({
+    apiKey: process.env.OPENROUTER_API_KEY,
+    baseURL: "https://openrouter.ai/api/v1",
+    defaultHeaders: {
+        "HTTP-Referer": process.env.CLIENT_URL || "http://localhost:5173", // Optional, for including your app on openrouter.ai rankings.
+        "X-Title": "ICS HRMS", // Optional. Shows in rankings on openrouter.ai.
+    }
+});
 
 const generateLeave = async (req, res) => {
     try {
@@ -10,11 +17,7 @@ const generateLeave = async (req, res) => {
             return res.status(400).json({ message: "Reason is required" });
         }
 
-        // Using gemini-2.0-flash as it is supported by the key
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-
         const prompt = `
-        You are a helpful HR assistant. A user wants to apply for a leave.
         Based on the user's input: "${reason}", generate a professional and formal leave application description suitable for a formal request.
         
         Also, try to extract the start date and end date from the text.
@@ -30,29 +33,26 @@ const generateLeave = async (req, res) => {
             "startDate": "YYYY-MM-DD" or null,
             "endDate": "YYYY-MM-DD" or null
         }
-        Do not include any markdown formatting like \`\`\`json. Just the raw JSON string.
         `;
 
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        let text = response.text();
+        const completion = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            messages: [
+                { role: "system", content: "You are a helpful HR assistant. You output only valid JSON." },
+                { role: "user", content: prompt }
+            ],
+            response_format: { type: "json_object" },
+        });
 
-        // Clean up markdown if present
-        text = text.replace(/```json/g, "").replace(/```/g, "").trim();
-
-        const data = JSON.parse(text);
+        const content = completion.choices[0].message.content;
+        const data = JSON.parse(content);
 
         res.status(200).json(data);
     } catch (error) {
         console.error("Error generating leave content:", error);
-        // Log deep details if available
-        if (error.response) {
-            console.error("Gemini Response Error:", JSON.stringify(error.response, null, 2));
-        }
         res.status(500).json({
             message: "Failed to generate content",
-            error: error.message,
-            details: error.response ? "Check server logs for details" : undefined
+            error: error.message
         });
     }
 };
@@ -65,10 +65,7 @@ const generateComplaint = async (req, res) => {
             return res.status(400).json({ message: "Complaint text is required" });
         }
 
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-
         const prompt = `
-        You are a helpful HR assistant. An employee wants to file a complaint or grievance.
         Based on the user's input: "${complaint}", generate a professional, clear, and formal complaint description.
         
         Also, generate a concise subject line for the complaint.
@@ -78,24 +75,23 @@ const generateComplaint = async (req, res) => {
             "subject": "A concise and professional subject line",
             "description": "The elaborate professional complaint description..."
         }
-        Do not include any markdown formatting like \`\`\`json. Just the raw JSON string.
         `;
 
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        let text = response.text();
+        const completion = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            messages: [
+                { role: "system", content: "You are a helpful HR assistant. You output only valid JSON." },
+                { role: "user", content: prompt }
+            ],
+            response_format: { type: "json_object" },
+        });
 
-        // Clean up markdown if present
-        text = text.replace(/```json/g, "").replace(/```/g, "").trim();
-
-        const data = JSON.parse(text);
+        const content = completion.choices[0].message.content;
+        const data = JSON.parse(content);
 
         res.status(200).json(data);
     } catch (error) {
         console.error("Error generating complaint content:", error);
-        if (error.response) {
-            console.error("Gemini Response Error:", JSON.stringify(error.response, null, 2));
-        }
         res.status(500).json({
             message: "Failed to generate content",
             error: error.message

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { format } from "date-fns";
 import { apiFetch } from "@/config/api";
 import { useToast } from "@/context/ToastContext";
 import {
@@ -40,6 +41,7 @@ import {
     Wand2,
     Loader2
 } from "lucide-react";
+
 
 
 
@@ -625,15 +627,22 @@ export default function HRLeaves() {
                                 </div>
                                 <div>
                                     <Label className="text-muted-foreground text-xs uppercase tracking-wider">Duration</Label>
-                                    <div className="font-medium mt-1">{selectedLeave.duration}</div>
+                                    <div className="font-medium mt-1">
+                                        {selectedLeave.duration || (() => {
+                                            const start = new Date(selectedLeave.startDate);
+                                            const end = new Date(selectedLeave.endDate);
+                                            const diff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+                                            return `${diff} ${diff === 1 ? 'Day' : 'Days'}`;
+                                        })()}
+                                    </div>
                                 </div>
                                 <div>
                                     <Label className="text-muted-foreground text-xs uppercase tracking-wider">Start Date</Label>
-                                    <div className="font-medium mt-1">{selectedLeave.startDate}</div>
+                                    <div className="font-medium mt-1">{format(new Date(selectedLeave.startDate), "yyyy-MM-dd")}</div>
                                 </div>
                                 <div>
                                     <Label className="text-muted-foreground text-xs uppercase tracking-wider">End Date</Label>
-                                    <div className="font-medium mt-1">{selectedLeave.endDate}</div>
+                                    <div className="font-medium mt-1">{format(new Date(selectedLeave.endDate), "yyyy-MM-dd")}</div>
                                 </div>
                             </div>
 

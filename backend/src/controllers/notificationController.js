@@ -178,8 +178,7 @@ exports.subscribe = async (req, res) => {
 };
 
 // Helper to send push
-// Helper to send push
-const sendPushToUser = async (userId, payload) => {
+exports.sendPushToUser = async (userId, payload) => {
     try {
         const admin = require('../config/firebase');
         if (!admin || !admin.messaging) return;

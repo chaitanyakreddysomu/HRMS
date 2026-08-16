@@ -11,6 +11,7 @@ import {
     Receipt,
     BookOpen,
     Bell,
+    Cake,
 
     Users,
     AlertCircle,
@@ -37,6 +38,7 @@ export function Sidebar() {
         { name: "Payslips", href: "/payslips", icon: Receipt, color: "green" },
         { name: "Company Policies", href: "/policies", icon: BookOpen, color: "fuchsia" },
         { name: "Notifications", href: "/notifications", icon: Bell, color: "amber" },
+        { name: "Referrals", href: "/referrals", icon: Users, color: "blue" },
         { name: "Complaints", href: "/complaints", icon: AlertCircle, color: "red" },
     ];
 
@@ -49,11 +51,13 @@ export function Sidebar() {
         { name: "Attendance", href: "/admin-attendance", icon: Clock, color: "lime" },
         { name: "Leaves", href: "/admin-leaves", icon: Coffee, color: "green" },
         { name: "Holidays", href: "/admin-holidays", icon: Calendar, color: "sky" },
+        { name: "Birthdays", href: "/admin-birthdays", icon: Cake, color: "pink" },
         { name: "Payslips", href: "/admin-payslips", icon: Wallet, color: "emerald" },
         { name: "Salary Structure", href: "/admin-salary-structure", icon: Calculator, color: "emerald" },
         { name: "Bank Details", href: "/admin-bank-details", icon: CreditCard, color: "purple" },
         { name: "Policies", href: "/admin-policies", icon: BookOpen, color: "fuchsia" },
         { name: "Notifications", href: "/admin-notifications", icon: Bell, color: "rose" },
+        { name: "Referrals", href: "/admin-referrals", icon: Users, color: "blue" },
         { name: "Complaints", href: "/admin-complaints", icon: AlertCircle, color: "amber" },
         { name: "Logs", href: "/admin-logs", icon: FileText, color: "gray" },
     ];
@@ -67,9 +71,11 @@ export function Sidebar() {
         { name: "Attendance", href: "/hr-attendance", icon: Clock, color: "lime" },
         { name: "Leaves", href: "/hr-leaves", icon: Coffee, color: "green" },
         { name: "Holidays", href: "/hr-holidays", icon: Calendar, color: "sky" },
+        { name: "Birthdays", href: "/hr-birthdays", icon: Cake, color: "pink" },
         { name: "Payslips", href: "/hr-payslips", icon: Wallet, color: "emerald" },
         { name: "Policies", href: "/hr-policies", icon: BookOpen, color: "fuchsia" },
         { name: "Notifications", href: "/hr-notifications", icon: Bell, color: "rose" },
+        { name: "Referrals", href: "/admin-referrals", icon: Users, color: "blue" },
         { name: "Complaints", href: "/hr-complaints", icon: AlertCircle, color: "amber" },
     ]
 
