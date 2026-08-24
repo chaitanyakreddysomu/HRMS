@@ -115,9 +115,14 @@ export default function AdminReferrals() {
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
             {/* HEADER */}
-            <div>
-                <h1 className="text-3xl font-bold tracking-tight text-foreground">Employee Referrals</h1>
-                <p className="text-muted-foreground">Manage and track candidate referrals from employees.</p>
+            <div className="flex items-center gap-4">
+                <div className="h-10 w-10 bg-primary rounded-lg flex items-center justify-center shadow-lg">
+                    <Users2 className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight text-foreground">Employee Referrals</h1>
+                    <p className="text-muted-foreground">Manage and track candidate referrals from employees.</p>
+                </div>
             </div>
 
             {/* STATS CARDS */}
@@ -193,12 +198,12 @@ export default function AdminReferrals() {
                                         return (
                                             <tr key={ref._id} className="hover:bg-slate-50/50 transition-colors">
                                                 <td className="p-6 align-middle">
-                                                    <div className="font-bold text-slate-900">{ref.candidateName}</div>
+                                                    <div className="font-medium text-slate-900">{ref.candidateName}</div>
                                                     <div className="text-xs text-slate-500">{ref.email}</div>
                                                 </td>
                                                 <td className="p-6 align-middle">
                                                     <div className="flex flex-col">
-                                                        <span className="font-semibold text-slate-700">{ref.experienceType === 'Fresher' ? 'Fresher' : ref.totalExperience}</span>
+                                                        <span className="font-medium text-slate-700">{ref.experienceType === 'Fresher' ? 'Fresher' : ref.totalExperience}</span>
                                                         {ref.experienceType !== 'Fresher' && (
                                                             <span className="text-[9px] font-black text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded uppercase w-fit mt-1">Experienced</span>
                                                         )}
@@ -216,7 +221,7 @@ export default function AdminReferrals() {
                                                         </div>
                                                         <div>
                                                             <div className="font-medium text-slate-700 whitespace-nowrap">{ref.referredByName}</div>
-                                                            <div className="text-[10px] text-slate-400 uppercase font-bold">{ref.referredByEmpId}</div>
+                                                            <div className="text-[10px] text-slate-400 uppercase font-medium">{ref.referredByEmpId}</div>
                                                         </div>
                                                     </div>
                                                 </td>

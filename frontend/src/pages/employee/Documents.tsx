@@ -260,7 +260,7 @@ export default function Documents() {
 
             {/* HEADER */}
             <h1 className="text-3xl font-bold flex items-center gap-3">
-                <div className="h-10 w-10 bg-yellow-500 rounded-lg flex items-center justify-center shadow-lg shadow-yellow-500/30">
+                <div className="h-10 w-10 rounded-lg flex items-center justify-center text-white shadow-lg" style={{ background: 'var(--button-bg)' }}>
                     <FileText className="h-6 w-6 text-white" />
                 </div>
                 My Documents

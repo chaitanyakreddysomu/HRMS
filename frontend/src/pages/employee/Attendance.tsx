@@ -178,7 +178,7 @@ export default function Attendance() {
         <div className="space-y-8 animate-in fade-in duration-500">
             {/* HEADER */}
             <h1 className="text-3xl font-bold flex items-center gap-3">
-                <div className="h-10 w-10 bg-lime-600 rounded-lg flex items-center justify-center shadow-lg shadow-lime-600/30">
+                <div className="h-10 w-10 rounded-lg flex items-center justify-center text-white shadow-lg" style={{ background: 'var(--button-bg)' }}>
                     <Timer className="h-6 w-6 text-white" />
                 </div>
                 Attendance

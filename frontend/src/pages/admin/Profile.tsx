@@ -173,7 +173,7 @@ export default function AdminProfile() {
             {/* Page Title & Edit Button */}
             <div className="flex justify-between items-center">
                 <div className="flex items-center gap-2">
-                    <div className="h-8 w-8 bg-orange-600 rounded-lg flex items-center justify-center text-white shadow-orange-200 shadow-lg">
+                    <div className="h-8 w-8 bg-primary rounded-lg flex items-center justify-center text-white shadow-lg">
                         <UserIcon className="h-5 w-5" />
                     </div>
                     <h1 className="text-2xl font-bold tracking-tight text-foreground">Admin Profile</h1>
@@ -181,7 +181,8 @@ export default function AdminProfile() {
                 <Button
                     onClick={isEditing ? handleSave : () => setIsEditing(true)}
                     disabled={isLoading}
-                    className="bg-orange-600 hover:bg-orange-700 text-white shadow-lg shadow-blue-200 transition-all hover:scale-105"
+                    className="text-white shadow-md transition-all hover:scale-105"
+                    style={{ background: 'var(--button-bg)' }}
                 >
                     {isLoading ? (
                         <Loader2 className="h-4 w-4 animate-spin text-white" />
@@ -195,12 +196,12 @@ export default function AdminProfile() {
             </div>
 
             {/* Main Profile Header Card */}
-            <Card className="border border-orange-500 shadow-xl bg-white overflow-hidden ring-1 ring-black/5 hover:shadow-2xl transition-all duration-300">
+            <Card className="border border-primary shadow-xl bg-white overflow-hidden ring-1 ring-black/5 hover:shadow-2xl transition-all duration-300">
                 <CardContent className="p-6">
                     <div className="flex flex-col md:flex-row items-center gap-6">
                         {/* Left Side: Profile Image */}
                         <div className="relative group shrink-0">
-                            <div className="h-24 w-24 rounded-full border-2 border-orange-500 shadow-2xl shadow-blue-100 p-1 bg-white overflow-hidden group-hover:scale-105 transition-transform duration-300 relative">
+                            <div className="h-24 w-24 rounded-full border-2 border-primary shadow-2xl p-1 bg-white overflow-hidden group-hover:scale-105 transition-transform duration-300 relative">
                                 <Avatar className="h-full w-full">
                                     <AvatarImage className="object-cover" src={previewImage || (displayUser.profileImage ? `${displayUser.profileImage}?t=${imageTimestamp}` : undefined) || `https://ui-avatars.com/api/?name=${displayUser.name}&background=ff4500&color=fff`} alt={displayUser.name} />
                                     <AvatarFallback className="text-2xl bg-muted">{displayUser.name?.charAt(0)}</AvatarFallback>

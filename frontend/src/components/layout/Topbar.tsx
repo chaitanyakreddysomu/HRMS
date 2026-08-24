@@ -180,7 +180,7 @@ export function Topbar() {
                         <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-sky-600 hover:bg-sky-50">
                             <Bell className="h-5 w-5" />
                             {unreadCount > 0 && (
-                                <span className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white ring-2 ring-white animate-in zoom-in">
+                                <span className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white ring-2 ring-white animate-in zoom-in">
                                     {unreadCount > 99 ? '99+' : unreadCount}
                                 </span>
                             )}
@@ -189,7 +189,7 @@ export function Topbar() {
                     <PopoverContent className="w-80 p-0 mr-4 shadow-xl border-slate-100" align="end">
                         <div className="flex items-center justify-between px-4 py-3 border-b bg-slate-50/50">
                             <h4 className="font-semibold text-sm">Notifications</h4>
-                            {unreadCount > 0 && <span className="text-xs text-sky-600 font-medium">{unreadCount} New</span>}
+                            {unreadCount > 0 && <span className="text-xs text-primary font-medium">{unreadCount} New</span>}
                         </div>
                         <div className="max-h-[300px] overflow-y-auto">
                             {unreadCount === 0 ? (
@@ -207,10 +207,7 @@ export function Topbar() {
                                                 onClick={() => handleNotificationClick(notif._id || notif.id)}
                                             >
                                                 <div className="flex justify-between items-start mb-1">
-                                                    <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${notif.type === 'alert' ? 'bg-red-100 text-red-700' :
-                                                        notif.type === 'success' ? 'bg-green-100 text-green-700' :
-                                                            'bg-blue-100 text-blue-700'
-                                                        }`}>
+                                                    <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-primary/15 text-primary">
                                                         {notif.source || 'System'}
                                                     </span>
                                                     <span className="text-[10px] text-muted-foreground">
@@ -270,7 +267,7 @@ export function Topbar() {
                 <div className="flex items-center gap-3">
                     <div className="text-right hidden md:block">
                         <p className="text-sm font-medium leading-none text-slate-700 capitalize">{user.name}</p>
-                        <p className="text-sm font-medium leading-none text-[#2563EB]">{user.projectStatus}</p>
+                        <p className="text-sm font-medium leading-none text-primary">{user.projectStatus}</p>
                     </div>
                     <Avatar className="h-9 w-9 border cursor-pointer hover:ring-2 hover:ring-sky-100 transition-all">
                         <AvatarImage className="object-cover" src={user.profileImage || `https://ui-avatars.com/api/?name=${user.name}&background=2563EB&color=fff`} alt={user.name} />

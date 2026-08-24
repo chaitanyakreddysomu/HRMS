@@ -489,7 +489,7 @@ export default function HRPayslips() {
             {/* HEADER */}
             <div>
                 <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-3">
-                    <div className="h-10 w-10 bg-emerald-600 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-600/30">
+                    <div className="h-10 w-10 bg-emerald-600 rounded-lg flex items-center justify-center shadow-lg">
                         <Wallet className="h-6 w-6 text-white" />
                     </div>
                     Payslips Management
@@ -942,7 +942,7 @@ export default function HRPayslips() {
                                                 <DialogTrigger asChild>
                                                     <Button size="sm" className={cn(
                                                         "text-white shadow-md active:scale-95 transition-transform gap-2",
-                                                        isPaid ? "bg-green-600 shadow-green-600/30" : isCreated ? "bg-blue-600 shadow-blue-600/30" : "bg-orange-600 shadow-orange-600/30"
+                                                        isPaid ? "bg-green-600" : isCreated ? "bg-blue-600" : "bg-orange-600"
                                                     )}>
                                                         <Eye className="h-4 w-4" /> View
                                                     </Button>

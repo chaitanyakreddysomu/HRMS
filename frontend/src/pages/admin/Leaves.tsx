@@ -202,9 +202,14 @@ export default function AdminLeaves() {
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
             {/* HEADER */}
-            <div>
-                <h1 className="text-3xl font-bold tracking-tight text-foreground">Leave Management</h1>
-                <p className="text-muted-foreground">Review and manage employee leave requests.</p>
+            <div className="flex items-center gap-4">
+                <div className="h-10 w-10 bg-primary rounded-lg flex items-center justify-center shadow-lg">
+                    <FileText className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight text-foreground">Leave Management</h1>
+                    <p className="text-muted-foreground">Review and manage employee leave requests.</p>
+                </div>
             </div>
 
             {/* STATS */}
@@ -262,8 +267,8 @@ export default function AdminLeaves() {
 
             {/* TABLE */}
             <Card className="shadow-md border-none">
-                <CardHeader className="bg-blue-50/50 border-b flex flex-row justify-between items-center">
-                    <CardTitle className="text-blue-700">Leave Requests</CardTitle>
+                <CardHeader className="bg-slate-50 border-b flex flex-row justify-between items-center">
+                    <CardTitle className="text-slate-800">Leave Requests</CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
                     <div className="divide-y relative w-full overflow-auto">
@@ -461,7 +466,7 @@ export default function AdminLeaves() {
                                             updateStatus(selectedLeave._id, 'approve');
                                             setIsDetailsOpen(false);
                                         }}>Approve</Button>
-                                        <Button variant="destructive" onClick={() => {
+                                        <Button variant="secondary" className="bg-gray-500 hover:bg-gray-600 text-white" onClick={() => {
                                             if (selectedLeave._id) {
                                                 setRejectId(selectedLeave._id);
                                                 setIsDetailsOpen(false);

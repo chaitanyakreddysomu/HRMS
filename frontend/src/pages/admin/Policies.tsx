@@ -213,12 +213,12 @@ export default function AdminPolicies() {
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-3">
-                    <div className="h-10 w-10 bg-purple-600 rounded-lg flex items-center justify-center shadow-lg shadow-purple-600/30">
+                    <div className="h-10 w-10 bg-primary rounded-lg flex items-center justify-center shadow-lg">
                         <BookOpen className="h-6 w-6 text-white" />
                     </div>
                     Company Policies (Admin)
                 </h1>
-                <Button onClick={() => handleOpenDialog()} className="bg-purple-600 hover:bg-purple-700 text-white shadow-md">
+                <Button onClick={() => handleOpenDialog()} className="text-white shadow-md" style={{ background: 'var(--button-bg)' }}>
                     <PlusCircle className="mr-2 h-4 w-4" /> Add Policy
                 </Button>
             </div>
@@ -375,7 +375,7 @@ export default function AdminPolicies() {
 
                     <DialogFooter>
                         <Button variant="ghost" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-                        <Button onClick={handleSave} className="bg-purple-600 hover:bg-purple-700 text-white">Save Policy</Button>
+                        <Button onClick={handleSave} className="text-white hover:opacity-90" style={{ background: 'var(--button-bg)' }}>Save Policy</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

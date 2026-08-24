@@ -171,7 +171,7 @@ export default function AdminEmployeeManagement() {
             {/* Header */}
             <div className="flex justify-between items-center">
                 <div className="flex items-center gap-4">
-                    <div className="h-10 w-10 bg-violet-600 rounded-lg flex items-center justify-center shadow-lg shadow-violet-600/30">
+                    <div className="h-10 w-10 bg-primary rounded-lg flex items-center justify-center shadow-lg">
                         <ClipboardList className="h-6 w-6 text-white" />
                     </div>
                     <div>
@@ -187,7 +187,7 @@ export default function AdminEmployeeManagement() {
 
             {isInitialLoading ? (
                 <div className="text-center py-10">
-                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-violet-600 border-r-transparent mb-2"></div>
+                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-primary border-r-transparent mb-2"></div>
                     <p className="text-muted-foreground">Loading employees...</p>
                 </div>
             ) : (
@@ -300,7 +300,7 @@ export default function AdminEmployeeManagement() {
                                             <TableRow>
                                                 <TableCell colSpan={6} className="h-64 text-center">
                                                     <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground">
-                                                        <Loader2 className="h-8 w-8 animate-spin text-violet-600" />
+                                                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
                                                         <p>Updating...</p>
                                                     </div>
                                                 </TableCell>
@@ -309,7 +309,7 @@ export default function AdminEmployeeManagement() {
                                             <TableRow>
                                                 <TableCell colSpan={6} className="h-24 text-center">
                                                     <div className="flex justify-center items-center h-full">
-                                                        <Loader2 className="h-6 w-6 animate-spin text-violet-600" />
+                                                        <Loader2 className="h-6 w-6 animate-spin text-primary" />
                                                     </div>
                                                 </TableCell>
                                             </TableRow>
@@ -364,7 +364,7 @@ export default function AdminEmployeeManagement() {
                                                             <Button
                                                                 size="icon"
                                                                 variant="ghost"
-                                                                className="h-8 w-8 text-violet-600 hover:text-violet-700 hover:bg-violet-50"
+                                                                className="h-8 w-8 text-primary hover:text-primary/80 hover:bg-primary/10"
                                                                 onClick={() => setViewEmployee(employee)}
                                                             >
                                                                 <Eye className="h-4 w-4" />
@@ -372,7 +372,7 @@ export default function AdminEmployeeManagement() {
                                                             <Button
                                                                 size="icon"
                                                                 variant="ghost"
-                                                                className="h-8 w-8 text-violet-600 hover:text-violet-700 hover:bg-violet-50"
+                                                                className="h-8 w-8 text-primary hover:text-primary/80 hover:bg-primary/10"
                                                                 onClick={() => setEditEmployee(employee)}
                                                             >
                                                                 <Edit className="h-4 w-4" />
@@ -420,9 +420,9 @@ export default function AdminEmployeeManagement() {
                         <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto [&::-webkit-scrollbar]:w-[5px] [&::-webkit-scrollbar-thumb]:bg-slate-300 [&::-webkit-scrollbar-thumb]:rounded-full">
                             <DialogHeader>
                                 <DialogTitle className="text-2xl font-bold flex items-center gap-4 pb-4 border-b">
-                                    <Avatar className="h-12 w-12 border-2 border-violet-100 shadow-md">
+                                    <Avatar className="h-12 w-12 border-2 border-primary/20 shadow-md">
                                         <AvatarImage className="object-cover" src={viewEmployee?.profileImage || viewEmployee?.avatar || `https://ui-avatars.com/api/?name=${viewEmployee?.name}&background=random`} alt={viewEmployee?.name} />
-                                        <AvatarFallback className="text-lg bg-violet-100 text-violet-700">
+                                        <AvatarFallback className="text-lg bg-primary/10 text-primary">
                                             {viewEmployee?.name?.charAt(0)}
                                         </AvatarFallback>
                                     </Avatar>
@@ -436,7 +436,7 @@ export default function AdminEmployeeManagement() {
                             <div className="space-y-6 pt-4">
                                 {/* Company Details */}
                                 <div className="space-y-3">
-                                    <h3 className="text-sm font-semibold flex items-center gap-2 text-violet-600">
+                                    <h3 className="text-sm font-semibold flex items-center gap-2 text-primary">
                                         <Building2 className="h-4 w-4" /> Company Details
                                     </h3>
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-lg border">
@@ -575,7 +575,7 @@ export default function AdminEmployeeManagement() {
                         <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto [&::-webkit-scrollbar]:w-[5px] [&::-webkit-scrollbar-thumb]:bg-slate-300 [&::-webkit-scrollbar-thumb]:rounded-full">
                             <DialogHeader>
                                 <DialogTitle className="text-2xl font-bold flex items-center gap-3 pb-4 border-b">
-                                    <div className="h-10 w-10 bg-violet-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-violet-200">
+                                    <div className="h-10 w-10 bg-primary rounded-lg flex items-center justify-center text-white shadow-lg">
                                         <Edit className="h-6 w-6" />
                                     </div>
                                     Edit Employee Details
@@ -585,7 +585,7 @@ export default function AdminEmployeeManagement() {
                             <div className="space-y-6 pt-4">
                                 {/* Company Details Edit */}
                                 <div className="space-y-4">
-                                    <h3 className="text-sm font-semibold text-violet-600 flex items-center gap-2">
+                                    <h3 className="text-sm font-semibold text-primary flex items-center gap-2">
                                         <Building2 className="h-4 w-4" /> Company Details
                                     </h3>
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border p-4 rounded-lg bg-slate-50">
@@ -852,7 +852,7 @@ export default function AdminEmployeeManagement() {
                             <div className="flex justify-end gap-3 pt-6 border-t mt-4">
                                 <Button variant="outline" onClick={() => setEditEmployee(null)}>Cancel</Button>
                                 <Button
-                                    className="bg-violet-600 hover:bg-violet-700 text-white"
+                                    className="text-white"
                                     onClick={handleUpdateEmployee}
                                 >
                                     Save Changes
@@ -886,10 +886,10 @@ function StatCard({
 }) {
     const styles = {
         violet: {
-            border: "border-l-violet-500",
-            text: "text-violet-600",
-            bg: "bg-violet-50/50",
-            iconBg: "bg-violet-500 shadow-violet-200",
+            border: "border-l-primary",
+            text: "text-primary",
+            bg: "bg-primary/5",
+            iconBg: "bg-primary shadow-primary/20",
         },
         green: {
             border: "border-l-green-500",

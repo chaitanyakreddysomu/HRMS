@@ -100,8 +100,13 @@ export default function AdminBankDetails() {
         <div className="space-y-6 animate-in fade-in duration-500">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-foreground">Bank Details</h1>
-                    <p className="text-muted-foreground mt-1">View and manage employee bank accounts and PF details.</p>
+                    <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-3">
+                        <div className="h-10 w-10 bg-primary rounded-lg flex items-center justify-center shadow-lg">
+                            <CreditCard className="h-6 w-6 text-white" />
+                        </div>
+                        Bank Details
+                    </h1>
+                    <p className="text-muted-foreground mt-1 ml-14">View and manage employee bank accounts and PF details.</p>
                 </div>
                 <Button className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-200">
                     <Download className="mr-2 h-4 w-4" />

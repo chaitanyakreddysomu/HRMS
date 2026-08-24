@@ -116,7 +116,10 @@ export function Login() {
     return (
         <div className="flex h-screen overflow-hidden w-full font-sans bg-gray-50">
             {/* Left Panel - Fixed */}
-            <div className="hidden lg:flex w-[45%] h-full bg-gradient-to-br from-blue-600 to-indigo-800 flex-col justify-center items-center text-white p-12 relative overflow-hidden">
+            <div 
+                className="hidden lg:flex w-[45%] h-full flex-col justify-center items-center text-white p-12 relative overflow-hidden"
+                style={{ background: 'var(--button-bg)' }}
+            >
                 {/* Decorative Background Elements */}
                 <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
                     <div className="absolute top-10 left-10 w-32 h-32 rounded-full bg-white blur-3xl"></div>
@@ -253,7 +256,7 @@ export function Login() {
 
                                     <div className="space-y-4 pt-2">
                                         <Button
-                                            className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-bold text-base shadow-lg shadow-blue-600/20 transition-all rounded-lg"
+                                            className="w-full h-12 text-white font-bold text-base transition-all rounded-lg"
                                             type="submit"
                                             id="signInBTN"
                                             disabled={isLoading}
@@ -390,7 +393,7 @@ export function Login() {
                                         </div>
 
                                         <div className="pt-4 flex gap-3">
-                                            <Button className="flex-1 h-11 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-lg shadow-blue-600/20" type="submit" disabled={isLoading}>
+                                            <Button className="flex-1 h-11 text-white font-bold rounded-lg" type="submit" disabled={isLoading}>
                                                 {isLoading ? "Signing Up..." : "Create Account"}
                                             </Button>
                                         </div>

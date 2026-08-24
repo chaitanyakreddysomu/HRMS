@@ -134,7 +134,7 @@ export default function Holidays() {
         <div className="space-y-8 animate-in fade-in duration-500">
             {/* Header */}
             <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-3">
-                <div className="h-10 w-10 bg-sky-500 rounded-lg flex items-center justify-center shadow-lg shadow-sky-500/30">
+                <div className="h-10 w-10 rounded-lg flex items-center justify-center text-white shadow-lg" style={{ background: 'var(--button-bg)' }}>
                     <CalendarIcon className="h-6 w-6 text-white" />
                 </div>
                 Holidays

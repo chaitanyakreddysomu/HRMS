@@ -141,7 +141,7 @@ export default function AdminDocuments() {
             {/* Header */}
             <div className="flex justify-between items-center">
                 <div className="flex items-center gap-4">
-                    <div className="h-10 w-10 bg-indigo-600 rounded-lg flex items-center justify-center shadow-lg shadow-indigo-600/30">
+                    <div className="h-10 w-10 bg-primary rounded-lg flex items-center justify-center shadow-lg">
                         <FileCheck className="h-6 w-6 text-white" />
                     </div>
                     <div>
@@ -238,7 +238,7 @@ export default function AdminDocuments() {
                                             )}
                                         </TableCell>
                                         <TableCell className="text-right pr-6">
-                                            <Button size="icon" onClick={() => setSelectedEmp(emp)} className="h-8 w-8 bg-violet-600 hover:bg-violet-700 text-white rounded-lg shadow-md shadow-violet-600/20">
+                                            <Button size="icon" onClick={() => setSelectedEmp(emp)} className="h-8 w-8 text-white rounded-lg shadow-md hover:opacity-90" style={{ background: 'var(--button-bg)' }}>
                                                 <Eye className="h-4 w-4" />
                                             </Button>
                                         </TableCell>
@@ -437,7 +437,7 @@ function DocumentReviewDialog({ employee, open, onOpenChange }: { employee: Empl
                 <div className="space-y-6 mt-4">
                     {/* TAB SWITCHER */}
                     <div className="relative grid grid-cols-4 w-full bg-slate-100 rounded-xl p-1 select-none">
-                        <span className={cn("absolute inset-1 w-[calc(25%-0.25rem)] rounded-lg bg-green-500 shadow-md transition-all duration-300 ease-in-out", activeTab === "Government" && "translate-x-0", activeTab === "Educational" && "translate-x-full", activeTab === "Personal" && "translate-x-[200%]", activeTab === "Experience" && "translate-x-[300%]")} />
+                        <span className={cn("absolute inset-1 w-[calc(25%-0.25rem)] rounded-lg bg-primary shadow-md transition-all duration-300 ease-in-out", activeTab === "Government" && "translate-x-0", activeTab === "Educational" && "translate-x-full", activeTab === "Personal" && "translate-x-[200%]", activeTab === "Experience" && "translate-x-[300%]")} />
                         {TABS.map((tab) => (
                             <button key={tab} onClick={() => setActiveTab(tab)} className={cn("relative z-10 w-full py-2.5 text-sm font-semibold rounded-lg transition-colors flex items-center justify-center gap-2", activeTab === tab ? "text-white" : "text-slate-600 hover:text-slate-900")}>
                                 {tab}

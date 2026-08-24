@@ -88,7 +88,7 @@ export default function AdminRequests() {
             {/* Header */}
             <div>
                 <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-3">
-                    <div className="h-10 w-10 bg-pink-600 rounded-lg flex items-center justify-center shadow-lg shadow-pink-600/30">
+                    <div className="h-10 w-10 bg-primary rounded-lg flex items-center justify-center shadow-lg">
                         <UserPlus className="h-6 w-6 text-white" />
                     </div>
                     Registration Requests
@@ -122,8 +122,8 @@ export default function AdminRequests() {
 
             {/* Requests Table */}
             <Card className="shadow-md border-none">
-                <CardHeader className="bg-pink-50/50 border-b">
-                    <CardTitle className="text-pink-800">Pending Approvals</CardTitle>
+                <CardHeader className="bg-slate-50 border-b">
+                    <CardTitle className="text-slate-800">Pending Approvals</CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
                     <div className="divide-y relative w-full overflow-auto">
@@ -143,8 +143,8 @@ export default function AdminRequests() {
                                     <TableRow>
                                         <TableCell colSpan={6} className="h-64">
                                             <div className="flex flex-col items-center justify-center h-full w-full gap-4">
-                                                <OrbitalLoader color="#db2777" size="lg" />
-                                                <p className="text-pink-600/80 font-medium animate-pulse">Fetching registration requests...</p>
+                                                <OrbitalLoader color="var(--primary)" size="lg" />
+                                                <p className="text-primary font-medium animate-pulse">Fetching registration requests...</p>
                                             </div>
                                         </TableCell>
                                     </TableRow>
@@ -230,7 +230,7 @@ export default function AdminRequests() {
                 <DialogContent className="sm:max-w-md">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-xl">
-                            <UserPlus className="h-5 w-5 text-pink-600" />
+                            <UserPlus className="h-5 w-5 text-primary" />
                             User Registration Details
                         </DialogTitle>
                     </DialogHeader>
@@ -239,7 +239,7 @@ export default function AdminRequests() {
                         <div className="space-y-6 pt-2">
                             {/* Basic Info */}
                             <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-lg border">
-                                <div className="h-12 w-12 bg-pink-100 text-pink-600 rounded-full flex items-center justify-center font-bold text-lg">
+                                <div className="h-12 w-12 bg-primary/10 text-primary rounded-full flex items-center justify-center font-bold text-lg">
                                     {selectedRequest.name?.charAt(0)}
                                 </div>
                                 <div className="space-y-0.5">
@@ -299,7 +299,8 @@ export default function AdminRequests() {
                                     <XCircle className="mr-2 h-4 w-4" /> Reject
                                 </Button>
                                 <Button
-                                    className="bg-green-600 hover:bg-green-700 text-white"
+                                    className="text-white hover:opacity-90"
+                                    style={{ background: 'var(--button-bg)' }}
                                     onClick={() => handleAction(selectedRequest.id, 'approve')}
                                 >
                                     <CheckCircle className="mr-2 h-4 w-4" /> Approve

@@ -173,7 +173,7 @@ export default function SalaryStructurePage() {
             <div className="flex justify-between items-center">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight text-slate-900 flex items-center gap-3">
-                        <div className="h-10 w-10 bg-emerald-600 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-600/30">
+                        <div className="h-10 w-10 bg-primary rounded-lg flex items-center justify-center shadow-lg">
                             <Calculator className="h-6 w-6 text-white" />
                         </div>
                         Salary Structures

@@ -187,7 +187,7 @@ export default function Notifications() {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-3">
-                        <div className="h-10 w-10 bg-amber-600 rounded-lg flex items-center justify-center shadow-lg shadow-amber-600/30">
+                        <div className="h-10 w-10 bg-primary rounded-lg flex items-center justify-center shadow-lg">
                             <BellRing className="h-6 w-6 text-white" />
                         </div>
 
@@ -204,7 +204,7 @@ export default function Notifications() {
                                 "gap-2 transition-all",
                                 isRegistered
                                     ? "bg-green-100 text-green-700 hover:bg-green-100 border-green-200 opacity-100"
-                                    : "border-amber-200 text-amber-700 hover:bg-amber-50 hover:text-amber-800"
+                                    : "border-primary/30 text-white hover:opacity-90"
                             )}
                         >
                             {isRegistered ? (
@@ -224,11 +224,11 @@ export default function Notifications() {
                         )}
                     </div>
 
-                    <div className="relative grid grid-cols-2 bg-white rounded-lg border border-amber-600 shadow-lg shadow-amber-600/30 p-1 w-fit select-none">
+                    <div className="relative grid grid-cols-2 bg-white rounded-lg border border-primary shadow-lg p-1 w-fit select-none">
                         {/* Sliding indicator */}
                         <span
                             className={cn(
-                                "absolute inset-1 w-[calc(50%-0.25rem)] rounded-md bg-amber-600 transition-transform duration-300 ease-in-out",
+                                "absolute inset-1 w-[calc(50%-0.25rem)] rounded-md bg-primary transition-transform duration-300 ease-in-out",
                                 filter === "all" ? "translate-x-0" : "translate-x-full"
                             )}
                         />
@@ -274,7 +274,7 @@ export default function Notifications() {
                             className={cn(
                                 "group relative overflow-hidden border-l-4 cursor-pointer transition-all duration-300",
                                 !notif.read
-                                    ? "bg-amber-50/50 border-l-amber-500 shadow-sm hover:shadow-md"
+                                    ? "bg-primary/5 border-l-primary shadow-sm hover:shadow-md"
                                     : "bg-gray-50/50 border-l-gray-400 hover:shadow-sm"
                             )}
                             onClick={() => setSelectedNotification(notif)}
@@ -285,7 +285,7 @@ export default function Notifications() {
                                     className={cn(
                                         "h-12 w-12 rounded-xl flex items-center justify-center shrink-0 shadow-sm transition-transform duration-300 group-hover:scale-110",
                                         !notif.read
-                                            ? "bg-amber-100 text-amber-600"
+                                            ? "bg-primary/15 text-primary"
                                             : "bg-gray-100 text-gray-500"
                                     )}
                                 >
@@ -315,7 +315,7 @@ export default function Notifications() {
                                             </h4>
 
                                             {!notif.read && (
-                                                <Badge className="bg-amber-100 text-amber-700 border-none text-[10px] px-2 py-0.5 uppercase tracking-wide">
+                                                <Badge className="bg-primary/15 text-primary border-none text-[10px] px-2 py-0.5 uppercase tracking-wide">
                                                     New
                                                 </Badge>
                                             )}
@@ -326,7 +326,7 @@ export default function Notifications() {
                                             <span
                                                 className={cn(
                                                     !notif.read
-                                                        ? "text-amber-600 font-medium"
+                                                        ? "text-primary font-medium"
                                                         : "text-gray-500"
                                                 )}
                                             >
@@ -367,7 +367,8 @@ export default function Notifications() {
                                             type="button"
                                             title="Mark as Read"
                                             onClick={(e) => handleMarkAsRead(notif._id, e)}
-                                            className="h-10 w-10 bg-amber-600 rounded-lg flex items-center justify-center shadow-lg shadow-amber-600/30 active:scale-95"
+                                            className="h-10 w-10 rounded-lg flex items-center justify-center shadow-lg active:scale-95 text-white"
+                                            style={{ background: 'var(--button-bg)' }}
                                         >
                                             <Check className="h-5 w-5 text-white" />
                                         </button>
@@ -387,7 +388,7 @@ export default function Notifications() {
                             <div className="flex items-center gap-3">
                                 <div className={cn(
                                     "h-10 w-10 rounded-full flex items-center justify-center shrink-0 shadow-sm",
-                                    !selectedNotification?.read ? "bg-amber-100 text-amber-600" : "bg-gray-100 text-gray-500"
+                                    !selectedNotification?.read ? "bg-primary/15 text-primary" : "bg-gray-100 text-gray-500"
                                 )}>
                                     {selectedNotification?.type === 'alert' ? <AlertTriangle className="h-5 w-5" /> :
                                         selectedNotification?.type === 'success' ? <CheckCircle2 className="h-5 w-5" /> :
@@ -403,7 +404,7 @@ export default function Notifications() {
                             <div className="flex flex-col items-end gap-1">
                                 <span className={cn(
                                     "text-xs font-normal whitespace-nowrap shrink-0",
-                                    !selectedNotification?.read ? "text-amber-600" : "text-gray-500"
+                                    !selectedNotification?.read ? "text-primary" : "text-gray-500"
                                 )}>
                                     {selectedNotification?.date && formatDistanceToNow(new Date(selectedNotification.date), { addSuffix: true })}
                                 </span>
@@ -413,9 +414,9 @@ export default function Notifications() {
                         <DialogDescription className="pt-4">
                             <div className={cn(
                                 "text-sm leading-relaxed p-4 rounded-lg border",
-                                !selectedNotification?.read
-                                    ? "bg-amber-50 border-amber-100 text-foreground"
-                                    : "bg-gray-50 border-gray-200 text-muted-foreground"
+                                    !selectedNotification?.read
+                                        ? "bg-primary/5 border-primary/20 text-foreground"
+                                        : "bg-gray-50 border-gray-200 text-muted-foreground"
                             )}>
                                 {selectedNotification?.message}
                             </div>
@@ -424,7 +425,7 @@ export default function Notifications() {
                     <div className="flex justify-end gap-2">
                         {/* <Button variant="outline" onClick={() => setSelectedNotification(null)}>Close</Button> */}
                         {!selectedNotification?.read && (
-                            <Button className="bg-amber-600 text-white hover:bg-amber-700" onClick={() => selectedNotification && handleMarkAsRead(selectedNotification._id)}>Mark as Read</Button>
+                            <Button className="text-white hover:opacity-90" style={{ background: 'var(--button-bg)' }} onClick={() => selectedNotification && handleMarkAsRead(selectedNotification._id)}>Mark as Read</Button>
                         )}
                     </div>
                 </DialogContent>

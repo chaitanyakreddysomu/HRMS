@@ -150,7 +150,7 @@ export default function AdminLogs() {
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div className="flex items-center gap-4">
-                    <div className="h-10 w-10 bg-slate-900 rounded-lg flex items-center justify-center shadow-lg shadow-slate-900/20">
+                    <div className="h-10 w-10 bg-primary rounded-lg flex items-center justify-center shadow-lg">
                         <Activity className="h-6 w-6 text-white" />
                     </div>
                     <div>

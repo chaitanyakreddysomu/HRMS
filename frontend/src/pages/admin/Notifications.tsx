@@ -304,7 +304,7 @@ export default function AdminNotifications() {
             <div className="flex justify-between items-center">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-3">
-                        <div className="h-10 w-10 bg-amber-600 rounded-lg flex items-center justify-center shadow-lg shadow-amber-600/30">
+                        <div className="h-10 w-10 bg-primary rounded-lg flex items-center justify-center shadow-lg">
                             <BellRing className="h-6 w-6 text-white" />
                         </div>
                         Notifications Center
@@ -313,7 +313,8 @@ export default function AdminNotifications() {
                 </div>
                 <Button
                     variant={pushEnabled ? "outline" : "default"}
-                    className={pushEnabled ? "bg-green-100 text-green-700 border-green-200 hover:bg-green-100 hover:text-green-700 cursor-default" : "bg-amber-600 text-white hover:bg-amber-700"}
+                    className={pushEnabled ? "bg-green-100 text-green-700 border-green-200 hover:bg-green-100 hover:text-green-700 cursor-default" : "text-white hover:opacity-90"}
+                    style={!pushEnabled ? { background: 'var(--button-bg)' } : undefined}
                     onClick={!pushEnabled ? enableNotifications : undefined}
                 >
                     {pushEnabled ? (
@@ -341,7 +342,7 @@ export default function AdminNotifications() {
                         </div>
                         <Dialog open={isSendDialogOpen} onOpenChange={setIsSendDialogOpen}>
                             <DialogTrigger asChild>
-                                <Button className="bg-amber-600 text-white shadow-lg shadow-amber-600/30 hover:bg-amber-700 active:scale-95">
+                                <Button className="text-white shadow-lg hover:opacity-90 active:scale-95" style={{ background: 'var(--button-bg)' }}>
                                     <PlusCircle className="mr-2 h-4 w-4" />
                                     Send Notification
                                 </Button>
@@ -425,7 +426,7 @@ export default function AdminNotifications() {
 
                                 <DialogFooter>
                                     <Button variant="ghost" onClick={() => setIsSendDialogOpen(false)}>Cancel</Button>
-                                    <Button onClick={handleSendNotification} className="bg-amber-600 hover:bg-amber-700 text-white">
+                                    <Button onClick={handleSendNotification} className="text-white hover:opacity-90" style={{ background: 'var(--button-bg)' }}>
                                         <Send className="mr-2 h-4 w-4" /> Send
                                     </Button>
                                 </DialogFooter>
@@ -436,7 +437,7 @@ export default function AdminNotifications() {
                     <div className="grid gap-4">
                         {sentLoading ? (
                             <div className="flex justify-center py-10">
-                                <Loader2 className="h-8 w-8 animate-spin text-amber-600" />
+                                <Loader2 className="h-8 w-8 animate-spin text-primary" />
                             </div>
                         ) : sentNotifications.length === 0 ? (
                             <Card className="text-center py-16 border-dashed border-2 bg-muted/10">
@@ -485,7 +486,7 @@ export default function AdminNotifications() {
                                 variant="outline"
                                 size="sm"
                                 onClick={requestPermission}
-                                className="h-9 text-xs font-medium text-amber-700 bg-amber-50 border-amber-200 hover:bg-amber-100 hover:text-amber-800"
+                                className="h-9 text-xs font-medium text-primary bg-primary/10 border-primary/20 hover:bg-primary/15 hover:text-primary"
                             >
                                 <BellRing className="w-3.5 h-3.5 mr-2" />
                                 Enable Push
@@ -493,7 +494,7 @@ export default function AdminNotifications() {
                             <div className="relative flex items-center bg-slate-100 p-1 rounded-lg w-[180px] h-9">
                                 <div
                                     className={cn(
-                                        "absolute inset-y-1 w-[calc(50%-4px)] bg-amber-500 rounded-md shadow-sm transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]",
+                                        "absolute inset-y-1 w-[calc(50%-4px)] bg-primary rounded-md shadow-sm transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]",
                                         myFilter === 'all' ? "left-1" : "left-[calc(50%)]"
                                     )}
                                 />
@@ -522,7 +523,7 @@ export default function AdminNotifications() {
                     <div className="grid gap-4">
                         {myLoading ? (
                             <div className="flex justify-center py-10">
-                                <Loader2 className="h-8 w-8 animate-spin text-amber-600" />
+                                <Loader2 className="h-8 w-8 animate-spin text-primary" />
                             </div>
                         ) : myNotifications.length === 0 ? (
                             <Card className="text-center py-16 border-dashed border-2 bg-muted/10">
@@ -540,7 +541,7 @@ export default function AdminNotifications() {
                                     className={cn(
                                         "group relative overflow-hidden border-l-4 cursor-pointer transition-all duration-300",
                                         !notif.read
-                                            ? "bg-amber-50/50 border-l-amber-500 shadow-sm hover:shadow-md"
+                                            ? "bg-primary/5 border-l-primary shadow-sm hover:shadow-md"
                                             : "bg-gray-50/50 border-l-gray-400 hover:shadow-sm"
                                     )}
                                     onClick={() => setSelectedMyNotification(notif)}
@@ -550,7 +551,7 @@ export default function AdminNotifications() {
                                             className={cn(
                                                 "h-12 w-12 rounded-xl flex items-center justify-center shrink-0 shadow-sm transition-transform duration-300 group-hover:scale-110",
                                                 !notif.read
-                                                    ? "bg-amber-100 text-amber-600"
+                                                    ? "bg-primary/15 text-primary"
                                                     : "bg-gray-100 text-gray-500"
                                             )}
                                         >
@@ -570,13 +571,13 @@ export default function AdminNotifications() {
                                                         {notif.title}
                                                     </h4>
                                                     {!notif.read && (
-                                                        <Badge className="bg-amber-100 text-amber-700 border-none text-[10px] px-2 py-0.5 uppercase tracking-wide">
+                                                        <Badge className="bg-primary/15 text-primary border-none text-[10px] px-2 py-0.5 uppercase tracking-wide">
                                                             New
                                                         </Badge>
                                                     )}
                                                 </div>
                                                 <div className="flex items-center gap-2 text-xs text-muted-foreground whitespace-nowrap">
-                                                    <span className={cn(!notif.read ? "text-amber-600 font-medium" : "text-gray-500")}>
+                                                    <span className={cn(!notif.read ? "text-primary font-medium" : "text-gray-500")}>
                                                         {formatDistanceToNow(new Date(notif.date), { addSuffix: true })}
                                                     </span>
                                                     {notif.source && (
@@ -598,7 +599,8 @@ export default function AdminNotifications() {
                                                     type="button"
                                                     title="Mark as Read"
                                                     onClick={(e) => markAsRead(notif.id, e)}
-                                                    className="h-10 w-10 bg-amber-600 rounded-lg flex items-center justify-center shadow-lg shadow-amber-600/30 active:scale-95 text-white"
+                                                    className="h-10 w-10 rounded-lg flex items-center justify-center shadow-lg active:scale-95 text-white"
+                                                    style={{ background: 'var(--button-bg)' }}
                                                 >
                                                     <Check className="h-5 w-5" />
                                                 </button>
@@ -618,7 +620,7 @@ export default function AdminNotifications() {
                         <DialogTitle className="flex items-center gap-3 text-xl">
                             <div className={cn(
                                 "h-10 w-10 rounded-full flex items-center justify-center shrink-0 shadow-sm",
-                                !selectedMyNotification?.read ? "bg-amber-100 text-amber-600" : "bg-gray-100 text-gray-500"
+                                !selectedMyNotification?.read ? "bg-primary/15 text-primary" : "bg-gray-100 text-gray-500"
                             )}>
                                 <Info className="h-5 w-5" />
                             </div>
@@ -628,7 +630,7 @@ export default function AdminNotifications() {
                             <div className={cn(
                                 "text-sm leading-relaxed p-4 rounded-lg border",
                                 !selectedMyNotification?.read
-                                    ? "bg-amber-50 border-amber-100 text-foreground"
+                                    ? "bg-primary/5 border-primary/20 text-foreground"
                                     : "bg-gray-50 border-gray-200 text-muted-foreground"
                             )}>
                                 {selectedMyNotification?.message}
@@ -637,7 +639,7 @@ export default function AdminNotifications() {
                     </DialogHeader>
                     <DialogFooter>
                         {!selectedMyNotification?.read && (
-                            <Button className="bg-amber-600 text-white hover:bg-amber-700" onClick={() => selectedMyNotification && markAsRead(selectedMyNotification.id)}>
+                            <Button className="text-white hover:opacity-90" style={{ background: 'var(--button-bg)' }} onClick={() => selectedMyNotification && markAsRead(selectedMyNotification.id)}>
                                 Mark as Read
                             </Button>
                         )}

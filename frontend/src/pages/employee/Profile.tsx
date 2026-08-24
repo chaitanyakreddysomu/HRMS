@@ -211,7 +211,7 @@ export default function Profile() {
             {/* Page Title & Edit Button */}
             <div className="flex justify-between items-center">
                 <div className="flex items-center gap-2">
-                    <div className="h-8 w-8 bg-orange-600 rounded-lg flex items-center justify-center text-white shadow-orange-200 shadow-lg">
+                    <div className="h-8 w-8 rounded-lg flex items-center justify-center text-white shadow-lg" style={{ background: 'var(--button-bg)' }}>
                         <UserIcon className="h-5 w-5" />
                     </div>
                     <h1 className="text-2xl font-bold tracking-tight text-foreground">My Profile</h1>
@@ -372,7 +372,7 @@ export default function Profile() {
             <Card className="border-2 border-orange-100 shadow-lg shadow-orange-50/50 hover:shadow-xl hover:shadow-orange-100/50 transition-all duration-300 overflow-hidden group">
                 <CardHeader className="bg-gradient-to-r from-orange-50/50 to-transparent border-b border-orange-100 pb-4">
                     <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 bg-orange-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-orange-200 group-hover:scale-110 transition-transform duration-300">
+                        <div className="h-10 w-10 rounded-lg flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform duration-300" style={{ background: 'var(--button-bg)' }}>
                             <Heart className="h-5 w-5" />
                         </div>
                         <CardTitle className="text-lg font-bold text-foreground">Personal Details</CardTitle>

@@ -168,7 +168,7 @@ export default function Payslips() {
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
-                    <div className="h-10 w-10 bg-green-600 rounded-lg flex items-center justify-center shadow-lg shadow-green-600/30">
+                    <div className="h-10 w-10 bg-green-600 rounded-lg flex items-center justify-center shadow-lg">
                         <Wallet className="h-6 w-6 text-white" />
                     </div>
                     Payslips
@@ -320,10 +320,10 @@ export default function Payslips() {
                                                     className={cn(
                                                         "text-white shadow-md active:scale-95 transition-transform gap-2",
                                                         isPaid
-                                                            ? "bg-green-600 shadow-green-600/30"
+                                                            ? "bg-green-600"
                                                             : isCreated
-                                                                ? "bg-blue-600 shadow-blue-600/30"
-                                                                : "bg-orange-600 shadow-orange-600/30"
+                                                                ? "bg-blue-600"
+                                                                : "bg-orange-600"
                                                     )}
                                                     onClick={() => { }}
                                                 >

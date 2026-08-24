@@ -556,7 +556,7 @@ export default function AdminPayslips() {
             {/* HEADER */}
             <div>
                 <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-3">
-                    <div className="h-10 w-10 bg-emerald-600 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-600/30">
+                    <div className="h-10 w-10 bg-primary rounded-lg flex items-center justify-center shadow-lg">
                         <Wallet className="h-6 w-6 text-white" />
                     </div>
                     Payslips Management
@@ -648,7 +648,7 @@ export default function AdminPayslips() {
                             if (!open) resetForm();
                         }}>
                             <DialogTrigger asChild>
-                                <Button className="bg-emerald-600 text-white shadow-lg shadow-emerald-600/30 hover:bg-emerald-700 active:scale-95 transition-all">
+                                <Button className="bg-emerald-600 text-white shadow-lg hover:bg-emerald-700 active:scale-95 transition-all">
                                     <PlusCircle className="mr-2 h-4 w-4" /> Create Payslip
                                 </Button>
                             </DialogTrigger>
@@ -955,8 +955,8 @@ export default function AdminPayslips() {
                 </div>
 
                 <Card className="shadow-md border-none">
-                    <CardHeader className="bg-emerald-50/50 border-b">
-                        <CardTitle className="text-emerald-800">Generated Payslips</CardTitle>
+                    <CardHeader className="border-b" style={{ background: 'linear-gradient(to right, var(--primary) 50%, #f1f5f9 50%)' }}>
+                        <CardTitle className="text-white">Generated Payslips</CardTitle>
                     </CardHeader>
                     <CardContent className="p-0">
                         <div className="divide-y relative w-full overflow-auto">

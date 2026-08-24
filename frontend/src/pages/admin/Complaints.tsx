@@ -155,7 +155,7 @@ export default function AdminComplaints() {
             {/* HEADER */}
             <div>
                 <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-3">
-                    <div className="h-10 w-10 bg-amber-600 rounded-lg flex items-center justify-center shadow-lg shadow-amber-600/30">
+                    <div className="h-10 w-10 bg-primary rounded-lg flex items-center justify-center shadow-lg">
                         <AlertCircle className="h-6 w-6 text-white" />
                     </div>
                     Complaints Administration
@@ -197,8 +197,8 @@ export default function AdminComplaints() {
             </div>
 
             <Card className="shadow-md border-none">
-                <CardHeader className="bg-amber-50/50 border-b">
-                    <CardTitle className="text-amber-800">Received Complaints</CardTitle>
+                <CardHeader className="bg-slate-50 border-b">
+                    <CardTitle className="text-slate-800">Received Complaints</CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
                     <div className="divide-y relative w-full overflow-auto">

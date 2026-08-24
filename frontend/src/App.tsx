@@ -2,6 +2,7 @@ import { RouterProvider, createBrowserRouter, createRoutesFromElements, Route, N
 import { MainLayout } from "./components/layout/MainLayout";
 import { AuthProvider } from "./context/AuthContext";
 import { ToastProvider } from "./context/ToastContext";
+import { ThemeProvider } from "./context/ThemeContext";
 // import EmployeeDashboard from "./pages/employee/Dashboard";
 import Profile from "./pages/employee/Profile";
 import Documents from "./pages/employee/Documents";
@@ -46,6 +47,7 @@ import AdminBankDetails from "./pages/admin/BankDetails";
 import AdminLogs from "./pages/admin/Logs";
 import AdminReferrals from "./pages/admin/Referrals";
 import SalaryStructurePage from "./pages/admin/SalaryStructure";
+import Customize from "./pages/admin/Customize";
 import Birthdays from "./pages/Birthdays";
 import Test from "./pages/Test";
 
@@ -107,6 +109,7 @@ const router = createBrowserRouter(
         <Route path="/admin-logs" element={<AdminLogs />} />
         <Route path="/admin-referrals" element={<AdminReferrals />} />
         <Route path="/admin-salary-structure" element={<SalaryStructurePage />} />
+        <Route path="/admin-customize" element={<Customize />} />
 
         {/* Fallback routes for other modules to be implemented */}
         <Route path="*" element={<Navigate to="/" replace />} />
@@ -127,11 +130,13 @@ const router = createBrowserRouter(
 
 function App() {
   return (
-    <AuthProvider>
-      <ToastProvider>
-        <RouterProvider router={router} />
-      </ToastProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <ToastProvider>
+          <RouterProvider router={router} />
+        </ToastProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 

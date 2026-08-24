@@ -46,6 +46,7 @@
     --ring: 222 84% 4.9%;
 
     --radius: 0.5rem;
+    --shadow-intensity: 0.08;
   }
 
   .dark {
@@ -87,4 +88,47 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+@layer utilities {
+  .shadow-sm {
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, var(--shadow-intensity)) !important;
+  }
+  .shadow {
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, var(--shadow-intensity)), 0 1px 2px -1px rgba(0, 0, 0, var(--shadow-intensity)) !important;
+  }
+  .shadow-md {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, var(--shadow-intensity)), 0 2px 4px -2px rgba(0, 0, 0, var(--shadow-intensity)) !important;
+  }
+  .shadow-lg {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, var(--shadow-intensity)), 0 4px 6px -4px rgba(0, 0, 0, var(--shadow-intensity)) !important;
+  }
+  .shadow-xl {
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, var(--shadow-intensity)), 0 8px 10px -6px rgba(0, 0, 0, var(--shadow-intensity)) !important;
+  }
+}
+
+@layer utilities {
+  .shadow-sm, .shadow, .shadow-md, .shadow-lg, .shadow-xl, .shadow-2xl {
+    box-shadow: var(--custom-shadow, 0 1px 3px 0 rgba(0, 0, 0, var(--shadow-intensity))) !important;
+  }
+}
+
+/* Custom Scrollbar Styles */
+::-webkit-scrollbar {
+  width: var(--scrollbar-width, 6px);
+  height: var(--scrollbar-width, 6px);
+}
+
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track-bg, #f1f5f9);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb-bg, #cbd5e1);
+  border-radius: var(--custom-scrollbar-radius, 9999px);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  filter: brightness(0.9);
 }

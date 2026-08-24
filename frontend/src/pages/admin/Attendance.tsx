@@ -143,9 +143,14 @@ export default function AdminAttendance() {
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
             {/* HEADER */}
-            <div>
-                <h1 className="text-3xl font-bold tracking-tight text-foreground">Attendance Management</h1>
-                <p className="text-muted-foreground">Monitor and manage employee daily attendance records.</p>
+            <div className="flex items-center gap-4">
+                <div className="h-10 w-10 bg-primary rounded-lg flex items-center justify-center shadow-lg">
+                    <Clock className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight text-foreground">Attendance Management</h1>
+                    <p className="text-muted-foreground">Monitor and manage employee daily attendance records.</p>
+                </div>
             </div>
 
             {/* STAT CARDS */}
@@ -195,8 +200,8 @@ export default function AdminAttendance() {
 
             {/* TABLE CARD */}
             <Card className="shadow-md border-none">
-                <CardHeader className="bg-blue-50/50 border-b flex flex-row justify-between items-center">
-                    <CardTitle className="text-blue-700">Attendance Records - {selectedDate}</CardTitle>
+                <CardHeader className="bg-slate-50 border-b flex flex-row justify-between items-center">
+                    <CardTitle className="text-slate-800">Attendance Records - {selectedDate}</CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
                     <div className="divide-y relative w-full overflow-auto">

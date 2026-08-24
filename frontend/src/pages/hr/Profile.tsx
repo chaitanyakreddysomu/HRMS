@@ -197,7 +197,7 @@ export default function HRProfile() {
             {/* Page Title & Edit Button */}
             <div className="flex justify-between items-center">
                 <div className="flex items-center gap-2">
-                    <div className="h-8 w-8 bg-orange-600 rounded-lg flex items-center justify-center text-white shadow-orange-200 shadow-lg">
+                    <div className="h-8 w-8 bg-primary rounded-lg flex items-center justify-center text-white shadow-lg">
                         <UserIcon className="h-5 w-5" />
                     </div>
                     <h1 className="text-2xl font-bold tracking-tight text-foreground">My Profile</h1>
@@ -208,7 +208,8 @@ export default function HRProfile() {
                         else setIsEditing(true);
                     }}
                     disabled={isSaving}
-                    className="bg-orange-600 hover:bg-orange-700 text-white shadow-lg shadow-blue-200 transition-all hover:scale-105"
+                    className="text-white shadow-md transition-all hover:scale-105"
+                    style={{ background: 'var(--button-bg)' }}
                 >
                     {isSaving ? (
                         <Loader2 className="h-4 w-4 animate-spin text-white" />
@@ -222,12 +223,12 @@ export default function HRProfile() {
             </div>
 
             {/* Main Profile Header Card */}
-            <Card className="border border-orange-500 shadow-xl bg-white overflow-hidden ring-1 ring-black/5 hover:shadow-2xl transition-all duration-300">
+            <Card className="border border-primary shadow-xl bg-white overflow-hidden ring-1 ring-black/5 hover:shadow-2xl transition-all duration-300">
                 <CardContent className="p-6">
                     <div className="flex flex-col md:flex-row items-center gap-6">
                         {/* Left Side: Profile Image */}
                         <div className="relative group shrink-0">
-                            <div className="h-24 w-24 rounded-full border-2 border-orange-500 shadow-2xl shadow-blue-100 p-1 bg-white overflow-hidden group-hover:scale-105 transition-transform duration-300 relative">
+                            <div className="h-24 w-24 rounded-full border-2 border-primary shadow-2xl p-1 bg-white overflow-hidden group-hover:scale-105 transition-transform duration-300 relative">
                                 <Avatar className="h-full w-full">
                                     <AvatarImage className="object-cover" src={previewImage || (formData.profileImage ? `${formData.profileImage}?t=${imageTimestamp}` : undefined) || `https://ui-avatars.com/api/?name=${formData.name}&background=ff4500&color=fff`} alt={formData.name} />
                                     <AvatarFallback className="text-2xl bg-muted">{formData.name?.charAt(0)}</AvatarFallback>
@@ -355,7 +356,7 @@ export default function HRProfile() {
             <Card className="border-2 border-orange-100 shadow-lg shadow-orange-50/50 hover:shadow-xl hover:shadow-orange-100/50 transition-all duration-300 overflow-hidden group">
                 <CardHeader className="bg-gradient-to-r from-orange-50/50 to-transparent border-b border-orange-100 pb-4">
                     <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 bg-orange-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-orange-200 group-hover:scale-110 transition-transform duration-300">
+                        <div className="h-10 w-10 rounded-lg flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform duration-300" style={{ background: 'var(--button-bg)' }}>
                             <Heart className="h-5 w-5" />
                         </div>
                         <CardTitle className="text-lg font-bold text-foreground">Personal Details</CardTitle>
