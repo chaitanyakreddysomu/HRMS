@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback } from "react";
+import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
 import { X, CheckCircle2, AlertTriangle, Info, AlertCircle } from "lucide-react";
 
 type ToastType = "success" | "error" | "info" | "warning";
@@ -33,10 +33,22 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         setToasts((prev) => prev.filter((t) => t.id !== id));
     }, []);
 
+    useEffect(() => {
+        const handleRateLimit = (e: Event) => {
+            const customEvent = e as CustomEvent<{ message: string }>;
+            addToast(customEvent.detail.message || "Too many requests, please try again.", "error");
+        };
+
+        window.addEventListener('api-rate-limit', handleRateLimit);
+        return () => {
+            window.removeEventListener('api-rate-limit', handleRateLimit);
+        };
+    }, [addToast]);
+
     const getIcon = (type: ToastType) => {
         switch (type) {
             case "success": return <CheckCircle2 className="h-5 w-5" />;
-            case "error": return <AlertCircle className="h-5 w-5" />;
+            case "error": return <AlertCircle className="h-5 w-5 text-red-500" />;
             case "warning": return <AlertTriangle className="h-5 w-5" />;
             default: return <Info className="h-5 w-5" />;
         }
@@ -45,7 +57,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     const getStyles = (type: ToastType) => {
         switch (type) {
             case "success": return "bg-white border-green-500 text-green-700";
-            case "error": return "bg-white border-red-500 text-red-700";
+            case "error": return "bg-red-50 border-red-500 text-red-800 shadow-md";
             case "warning": return "bg-white border-amber-500 text-amber-700";
             default: return "bg-white border-blue-500 text-blue-700";
         }
@@ -54,7 +66,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     return (
         <ToastContext.Provider value={{ addToast, removeToast }}>
             {children}
-            <div className="fixed bottom-6 right-6 z-[100] flex flex-col gap-3 pointer-events-none">
+            <div className="fixed top-6 right-6 z-[100] flex flex-col gap-3 pointer-events-none">
                 {toasts.map((toast) => (
                     <div
                         key={toast.id}

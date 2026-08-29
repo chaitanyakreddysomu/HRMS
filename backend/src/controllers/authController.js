@@ -2,6 +2,9 @@ const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const logger = require('../utils/logger');
+const speakeasy = require('speakeasy');
+const QRCode = require('qrcode');
+
 
 exports.login = async (req, res) => {
     try {
@@ -40,6 +43,21 @@ exports.login = async (req, res) => {
                 : "You are rejected, please contact your HR";
 
             return res.status(403).json({ message: msg });
+        }
+
+        // Check Two-Factor Authentication Status
+        if (user.twoFactorEnabled) {
+            const tempToken = jwt.sign(
+                { id: user.id, purpose: '2fa_login', role: user.role, name: user.name, mongoId: user._id },
+                process.env.JWT_SECRET,
+                { expiresIn: '5m' }
+            );
+
+            return res.json({
+                twoFactorRequired: true,
+                tempToken,
+                email: user.email
+            });
         }
 
         // Generate Tokens
@@ -151,3 +169,157 @@ exports.register = async (req, res) => {
         res.status(500).json({ message: "Server Error" });
     }
 };
+
+exports.verify2FALogin = async (req, res) => {
+    try {
+        const { tempToken, code } = req.body;
+        if (!tempToken || !code) {
+            return res.status(400).json({ message: "Temp token and code are required" });
+        }
+
+        const decoded = jwt.verify(tempToken, process.env.JWT_SECRET);
+        if (decoded.purpose !== '2fa_login') {
+            return res.status(401).json({ message: "Invalid session token" });
+        }
+
+        const user = await User.findById(decoded.mongoId);
+        if (!user || !user.twoFactorEnabled || !user.twoFactorSecret) {
+            return res.status(400).json({ message: "Two-Factor authentication not configured" });
+        }
+
+        const verified = speakeasy.totp.verify({
+            secret: user.twoFactorSecret,
+            encoding: 'base32',
+            token: code,
+            window: 1
+        });
+
+        if (!verified) {
+            return res.status(400).json({ message: "Invalid authenticator code" });
+        }
+
+        // Generate Tokens
+        const accessToken = jwt.sign(
+            { id: user.id, role: user.role, name: user.name, mongoId: user._id },
+            process.env.JWT_SECRET,
+            { expiresIn: '1h' }
+        );
+
+        const refreshToken = jwt.sign(
+            { id: user.id, role: user.role, name: user.name, mongoId: user._id },
+            process.env.JWT_REFRESH_SECRET,
+            { expiresIn: '7d' }
+        );
+
+        await logger.logAction(req, user, 'Auth', 'Login', 'User logged in successfully (2FA verified)', 'Success');
+
+        res.json({
+            accessToken,
+            refreshToken,
+            user: {
+                id: user.id,
+                name: user.name,
+                role: user.role,
+                email: user.email,
+                avatar: user.avatar,
+                profileImage: user.profileImage,
+                dob: user.dob
+            }
+        });
+    } catch (error) {
+        console.error(error);
+        if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
+            return res.status(401).json({ message: "Session expired, please try again" });
+        }
+        res.status(500).json({ message: "Server Error" });
+    }
+};
+
+exports.get2FAStatus = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.mongoId);
+        if (!user) return res.status(404).json({ message: "User not found" });
+
+        res.json({ twoFactorEnabled: user.twoFactorEnabled });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Server Error" });
+    }
+};
+
+exports.setup2FA = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.mongoId);
+        if (!user) return res.status(404).json({ message: "User not found" });
+
+        const secret = speakeasy.generateSecret({
+            name: `ICS HRMS (${user.email})`
+        });
+
+        // Save secret temporarily but don't enable yet
+        user.twoFactorSecret = secret.base32;
+        await user.save();
+
+        const qrCodeDataUrl = await QRCode.toDataURL(secret.otpauth_url);
+
+        res.json({
+            secret: secret.base32,
+            qrCodeDataUrl
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Server Error" });
+    }
+};
+
+exports.verify2FA = async (req, res) => {
+    try {
+        const { code } = req.body;
+        if (!code) return res.status(400).json({ message: "Verification code is required" });
+
+        const user = await User.findById(req.user.mongoId);
+        if (!user || !user.twoFactorSecret) {
+            return res.status(400).json({ message: "2FA setup is not initialized" });
+        }
+
+        const verified = speakeasy.totp.verify({
+            secret: user.twoFactorSecret,
+            encoding: 'base32',
+            token: code,
+            window: 1
+        });
+
+        if (!verified) {
+            return res.status(400).json({ message: "Invalid verification code" });
+        }
+
+        user.twoFactorEnabled = true;
+        await user.save();
+
+        await logger.logAction(req, user, 'Auth', '2FA', 'Two-Factor Authentication (TOTP) enabled successfully', 'Success');
+
+        res.json({ message: "Two-Factor Authentication enabled successfully" });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Server Error" });
+    }
+};
+
+exports.disable2FA = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.mongoId);
+        if (!user) return res.status(404).json({ message: "User not found" });
+
+        user.twoFactorSecret = undefined;
+        user.twoFactorEnabled = false;
+        await user.save();
+
+        await logger.logAction(req, user, 'Auth', '2FA', 'Two-Factor Authentication disabled', 'Success');
+
+        res.json({ message: "Two-Factor Authentication disabled successfully" });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Server Error" });
+    }
+};
+

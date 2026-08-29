@@ -20,6 +20,8 @@ import {
     Wallet,
     CreditCard,
     Calculator,
+    Shield,
+    ShieldAlert,
 } from "lucide-react";
 
 export function Sidebar() {
@@ -40,6 +42,7 @@ export function Sidebar() {
         { name: "Notifications", href: "/notifications", icon: Bell, color: "amber" },
         { name: "Referrals", href: "/referrals", icon: Users, color: "blue" },
         { name: "Complaints", href: "/complaints", icon: AlertCircle, color: "red" },
+        { name: "Security", href: "/security", icon: Shield, color: "red" },
     ];
 
     const adminLinks = [
@@ -60,6 +63,8 @@ export function Sidebar() {
         { name: "Referrals", href: "/admin-referrals", icon: Users, color: "blue" },
         { name: "Complaints", href: "/admin-complaints", icon: AlertCircle, color: "amber" },
         { name: "Logs", href: "/admin-logs", icon: FileText, color: "gray" },
+        { name: "Security", href: "/security", icon: Shield, color: "red" },
+        { name: "2FA Users", href: "/admin-2fa", icon: ShieldAlert, color: "indigo" },
     ];
 
     const hrLinks = [
@@ -77,7 +82,8 @@ export function Sidebar() {
         { name: "Notifications", href: "/hr-notifications", icon: Bell, color: "rose" },
         { name: "Referrals", href: "/admin-referrals", icon: Users, color: "blue" },
         { name: "Complaints", href: "/hr-complaints", icon: AlertCircle, color: "amber" },
-    ]
+        { name: "Security", href: "/security", icon: Shield, color: "red" },
+    ];
 
     const links = user.role === "EMPLOYEE"
         ? employeeLinks

@@ -72,10 +72,18 @@ export const apiFetch = async (url: string, options: RequestInit = {}) => {
         headers["Authorization"] = `Bearer ${token}`;
     }
 
-    return fetch(`${API_BASE_URL}${url}`, {
+    const response = await fetch(`${API_BASE_URL}${url}`, {
         ...options,
         headers,
     });
+
+    if (response.status === 429) {
+        window.dispatchEvent(new CustomEvent('api-rate-limit', {
+            detail: { message: "Too many requests, please try again." }
+        }));
+    }
+
+    return response;
 };
 
 export default API_BASE_URL;

@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog";
-import { Eye, EyeOff, Mail, Lock, ArrowRight, User, Phone, Building, Briefcase, CheckCircle2 } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, ArrowRight, User, Phone, Building, Briefcase, CheckCircle2, Shield, Fingerprint } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { startAuthentication } from "@simplewebauthn/browser";
 import icsLogo from "../assets/ics_logo.jpeg";
 
 export function Login() {
@@ -31,11 +32,55 @@ export function Login() {
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
     const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
+    // 2FA State
+    const [step, setStep] = useState<"credentials" | "2fa">("credentials");
+    const [tempToken, setTempToken] = useState<string | null>(null);
+    const [twoFactorType, setTwoFactorType] = useState<string>("TOTP"); // 'TOTP' | 'PASSKEY'
+    const [twoFactorCode, setTwoFactorCode] = useState<string>("");
+
     // Clear messages when switching views
     const handleSetView = (newView: "login" | "register") => {
         setView(newView);
         setErrorMsg(null);
         setSuccessMsg(null);
+    };
+
+    const handlePasskeyLogin = async (currentTempToken: string) => {
+        setIsLoading(true);
+        setErrorMsg(null);
+        try {
+            // 1. Fetch Assertion options
+            const optionsRes = await apiFetch("/api/auth/passkey/login-options", {
+                method: "POST",
+                body: JSON.stringify({ tempToken: currentTempToken })
+            });
+            if (!optionsRes.ok) throw new Error("Failed to load passkey login options.");
+            const options = await optionsRes.json();
+
+            // 2. Perform WebAuthn authentication via browser
+            const assertResponse = await startAuthentication(options);
+
+            // 3. Verifyassertion on backend
+            const verifyRes = await apiFetch("/api/auth/passkey/login-verify", {
+                method: "POST",
+                body: JSON.stringify({ body: assertResponse, tempToken: currentTempToken })
+            });
+            const data = await verifyRes.json();
+
+            if (verifyRes.ok) {
+                localStorage.setItem('token', data.accessToken);
+                localStorage.setItem('refresh_token', data.refreshToken);
+                login(data.user.role || "EMPLOYEE", data.user);
+                navigate("/");
+            } else {
+                setErrorMsg(data.message || "Passkey verification failed.");
+            }
+        } catch (error: any) {
+            console.error("Passkey assertion error:", error);
+            setErrorMsg(error.message || "Biometric authentication failed or cancelled.");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleLogin = async (e: React.FormEvent) => {
@@ -53,15 +98,58 @@ export function Login() {
             const data = await res.json();
 
             if (res.ok) {
-                localStorage.setItem('token', data.accessToken);
-                localStorage.setItem('refresh_token', data.refreshToken);
-                login(data.user.role || "EMPLOYEE", data.user);
-                navigate("/");
+                if (data.twoFactorRequired) {
+                    setTempToken(data.tempToken);
+                    setTwoFactorType(data.twoFactorType || "TOTP");
+                    setStep("2fa");
+                    if (data.twoFactorType === "PASSKEY") {
+                        handlePasskeyLogin(data.tempToken);
+                    }
+                } else {
+                    localStorage.setItem('token', data.accessToken);
+                    localStorage.setItem('refresh_token', data.refreshToken);
+                    login(data.user.role || "EMPLOYEE", data.user);
+                    navigate("/");
+                }
             } else {
                 setErrorMsg(data.message || "Login failed");
             }
         } catch (error) {
             console.error("Login Error:", error);
+            setErrorMsg("Something went wrong. Please try again.");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleVerify2FA = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!twoFactorCode || twoFactorCode.length < 6) {
+            setErrorMsg("Please enter a valid 6-digit code");
+            return;
+        }
+
+        setIsLoading(true);
+        setErrorMsg(null);
+
+        try {
+            const res = await apiFetch('/api/auth/login/2fa', {
+                method: 'POST',
+                body: JSON.stringify({ tempToken, code: twoFactorCode })
+            });
+
+            const data = await res.json();
+
+            if (res.ok) {
+                localStorage.setItem('token', data.accessToken);
+                localStorage.setItem('refresh_token', data.refreshToken);
+                login(data.user.role || "EMPLOYEE", data.user);
+                navigate("/");
+            } else {
+                setErrorMsg(data.message || "2FA Verification failed");
+            }
+        } catch (error) {
+            console.error("2FA Login Error:", error);
             setErrorMsg("Something went wrong. Please try again.");
         } finally {
             setIsLoading(false);
@@ -172,26 +260,28 @@ export function Login() {
                     <Card className={`w-full shadow-lg border border-blue-100 bg-white transition-all duration-300 ${view === "register" ? "max-w-[600px]" : "max-w-[500px]"}`}>
                         <CardContent className="p-8 md:p-10">
                             {/* Tab Switcher */}
-                            <div className="flex bg-gray-100/80 p-1.5 rounded-xl mb-8 w-full max-w-sm mx-auto">
-                                <button
-                                    onClick={() => handleSetView("login")}
-                                    className={`flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 ${view === "login"
-                                        ? "bg-white shadow-sm text-gray-900"
-                                        : "text-gray-500 hover:text-gray-700"
-                                        }`}
-                                >
-                                    Sign In
-                                </button>
-                                <button
-                                    onClick={() => handleSetView("register")}
-                                    className={`flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 ${view === "register"
-                                        ? "bg-white shadow-sm text-gray-900"
-                                        : "text-gray-500 hover:text-gray-700"
-                                        }`}
-                                >
-                                    Sign Up
-                                </button>
-                            </div>
+                            {step !== "2fa" && (
+                                <div className="flex bg-gray-100/80 p-1.5 rounded-xl mb-8 w-full max-w-sm mx-auto">
+                                    <button
+                                        onClick={() => handleSetView("login")}
+                                        className={`flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 ${view === "login"
+                                            ? "bg-white shadow-sm text-gray-900"
+                                            : "text-gray-500 hover:text-gray-700"
+                                            }`}
+                                    >
+                                        Sign In
+                                    </button>
+                                    <button
+                                        onClick={() => handleSetView("register")}
+                                        className={`flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 ${view === "register"
+                                            ? "bg-white shadow-sm text-gray-900"
+                                            : "text-gray-500 hover:text-gray-700"
+                                            }`}
+                                    >
+                                        Sign Up
+                                    </button>
+                                </div>
+                            )}
 
                             {/* MESSAGES */}
                             {errorMsg && (
@@ -205,7 +295,90 @@ export function Login() {
                                 </div>
                             )}
 
-                            {view === "login" ? (
+                            {step === "2fa" ? (
+                                /* 2FA CODE OR BIOMETRIC FORM */
+                                twoFactorType === "PASSKEY" ? (
+                                    <div className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-300 text-center">
+                                        <Fingerprint className="h-16 w-16 text-indigo-600 mx-auto mb-2 animate-pulse" />
+                                        <h3 className="text-xl font-bold text-gray-900 font-sans">Fingerprint / Passkey Login</h3>
+                                        <p className="text-sm text-gray-500 max-w-xs mx-auto">
+                                            Please verify your identity using your device's fingerprint scanner or biometric lock.
+                                        </p>
+                                        
+                                        <div className="space-y-3 pt-4">
+                                            <Button
+                                                onClick={() => tempToken && handlePasskeyLogin(tempToken)}
+                                                className="w-full h-12 text-white font-bold text-base bg-indigo-600 hover:bg-indigo-500 rounded-xl shadow-md shadow-indigo-150"
+                                                type="button"
+                                                disabled={isLoading}
+                                            >
+                                                {isLoading ? "Verifying..." : "Use Biometrics / Passkey"}
+                                            </Button>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setStep("credentials");
+                                                    setTwoFactorCode("");
+                                                    setErrorMsg(null);
+                                                }}
+                                                className="w-full text-center text-sm font-semibold text-slate-500 hover:text-slate-700 hover:underline py-1"
+                                            >
+                                                Back to Sign In
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <form onSubmit={handleVerify2FA} className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-300">
+                                        <div className="text-center mb-4">
+                                            <Shield className="h-12 w-12 text-indigo-600 mx-auto mb-2" />
+                                            <h3 className="text-lg font-bold text-gray-900">Two-Factor Authentication</h3>
+                                            <p className="text-sm text-gray-500 mt-1">
+                                                Enter the 6-digit verification code from your authenticator app.
+                                            </p>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label htmlFor="code" className="text-gray-700 font-semibold text-sm">Authenticator Code</Label>
+                                            <div className="relative group">
+                                                <Lock className="absolute left-3 top-3.5 h-4 w-4 text-gray-400 group-focus-within:text-indigo-600 transition-colors" />
+                                                <Input
+                                                    id="code"
+                                                    placeholder="000000"
+                                                    className="pl-10 h-12 text-center text-lg font-bold tracking-widest bg-gray-50/50 border-gray-200 focus:bg-white focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                                                    maxLength={6}
+                                                    value={twoFactorCode}
+                                                    onChange={(e) => setTwoFactorCode(e.target.value.replace(/\D/g, ""))}
+                                                    required
+                                                    autoFocus
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-3 pt-2">
+                                            <Button
+                                                className="w-full h-12 text-white font-bold text-base transition-all rounded-lg bg-indigo-600 hover:bg-indigo-500"
+                                                type="submit"
+                                                disabled={isLoading}
+                                            >
+                                                {isLoading ? "Verifying..." : "Verify & Sign In"}
+                                            </Button>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setStep("credentials");
+                                                    setTwoFactorCode("");
+                                                    setErrorMsg(null);
+                                                }}
+                                                className="w-full text-center text-sm font-semibold text-slate-500 hover:text-slate-700 hover:underline py-1"
+                                            >
+                                                Back to Sign In
+                                            </button>
+                                        </div>
+                                    </form>
+                                )
+                            ) : view === "login" ? (
                                 /* LOGIN FORM */
                                 <form onSubmit={handleLogin} className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-300">
                                     <div className="space-y-2">

@@ -45,7 +45,9 @@ const userSchema = new mongoose.Schema({
         lastActive: { type: Date, default: Date.now }
     }],
     profileImage: { type: String }, // URL from Supabase
-    fcmToken: { type: String, default: null } // Legacy/Single device fallback
+    fcmToken: { type: String, default: null }, // Legacy/Single device fallback
+    twoFactorSecret: { type: String },
+    twoFactorEnabled: { type: Boolean, default: false }
 }, { timestamps: true });
 
 // Performance Indexes

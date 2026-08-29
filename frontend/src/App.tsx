@@ -48,6 +48,8 @@ import AdminLogs from "./pages/admin/Logs";
 import AdminReferrals from "./pages/admin/Referrals";
 import SalaryStructurePage from "./pages/admin/SalaryStructure";
 import Customize from "./pages/admin/Customize";
+import Security from "@/pages/admin/Security";
+import TwoFactorManagement from "@/pages/admin/TwoFactorManagement";
 import Birthdays from "./pages/Birthdays";
 import Test from "./pages/Test";
 
@@ -110,6 +112,8 @@ const router = createBrowserRouter(
         <Route path="/admin-referrals" element={<AdminReferrals />} />
         <Route path="/admin-salary-structure" element={<SalaryStructurePage />} />
         <Route path="/admin-customize" element={<Customize />} />
+        <Route path="/security" element={<Security />} />
+        <Route path="/admin-2fa" element={<TwoFactorManagement />} />
 
         {/* Fallback routes for other modules to be implemented */}
         <Route path="*" element={<Navigate to="/" replace />} />

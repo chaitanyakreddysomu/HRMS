@@ -191,4 +191,7 @@ router.get('/salary-structures/calculate/:empId', auth, adminController.getEmplo
 // System Logs
 router.get('/logs', auth, logController.getLogs);
 
+// 2FA Management
+router.get('/users-2fa', auth, adminController.getUsers2FAStatus);
+
 module.exports = router;

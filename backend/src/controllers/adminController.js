@@ -2340,3 +2340,50 @@ exports.getAdminDocumentPreview = async (req, res) => {
         res.status(500).json({ message: "Server Error" });
     }
 };
+
+exports.getUsers2FAStatus = async (req, res) => {
+    try {
+        const { search, role, status, page = 1, limit = 10 } = req.query;
+        const pageNum = parseInt(page, 10);
+        const limitNum = parseInt(limit, 10);
+        const skip = (pageNum - 1) * limitNum;
+
+        // Build filter conditions
+        const filter = {};
+
+        if (search) {
+            filter.$or = [
+                { name: { $regex: search, $options: 'i' } },
+                { email: { $regex: search, $options: 'i' } },
+                { id: { $regex: search, $options: 'i' } }
+            ];
+        }
+
+        if (role && role !== 'All') {
+            filter.role = role;
+        }
+
+        if (status && status !== 'All') {
+            filter.twoFactorEnabled = status === 'Enabled';
+        }
+
+        // Fetch users and total count
+        const total = await User.countDocuments(filter);
+        const users = await User.find(filter, 'name email profileImage role twoFactorEnabled')
+            .skip(skip)
+            .limit(limitNum);
+
+        res.json({
+            users,
+            pagination: {
+                total,
+                page: pageNum,
+                limit: limitNum,
+                pages: Math.ceil(total / limitNum)
+            }
+        });
+    } catch (error) {
+        console.error("Get Users 2FA Status Error:", error);
+        res.status(500).json({ message: "Server Error" });
+    }
+};

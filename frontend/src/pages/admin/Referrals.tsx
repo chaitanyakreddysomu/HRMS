@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { apiFetch } from "@/config/api";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,19 +8,15 @@ import { Badge } from "@/components/ui/badge";
 import {
     Users, Search, Mail, Phone, MapPin,
     Briefcase, GraduationCap, Building2, Download,
-    Eye, Filter, CheckCircle2, Clock, XCircle,
-    Info, Star, ExternalLink, Calendar,
-    ArrowUpRight, Users2, UserCheck, UserMinus,
-    Check
+    Eye, CheckCircle2, Clock, XCircle,
+    Star, ExternalLink, Calendar, Users2
 } from "lucide-react";
 import {
-    Dialog, DialogContent, DialogHeader,
-    DialogTitle, DialogFooter, DialogDescription
+    Dialog, DialogContent, DialogHeader, DialogTitle
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/context/ToastContext";
-import { useNavigate } from "react-router-dom";
 
 const STATUS_CONFIG = {
     "Under Review": { color: "bg-yellow-100 text-yellow-700 border-yellow-200", icon: Clock },
@@ -32,7 +28,6 @@ const STATUS_CONFIG = {
 };
 
 export default function AdminReferrals() {
-    const navigate = useNavigate();
     const { addToast } = useToast();
 
     const calculateDuration = (from: string, to: string) => {
@@ -57,7 +52,6 @@ export default function AdminReferrals() {
         return [yearsPart, monthsPart].filter(Boolean).join(" ");
     };
     const [referrals, setReferrals] = useState<any[]>([]);
-    const [stats, setStats] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
     const [filterStatus, setFilterStatus] = useState("All");
@@ -71,13 +65,8 @@ export default function AdminReferrals() {
     const fetchData = async () => {
         try {
             setLoading(true);
-            const [referralsRes, statsRes] = await Promise.all([
-                apiFetch(`/api/referrals?status=${filterStatus}&search=${searchTerm}`),
-                apiFetch('/api/referrals/stats')
-            ]);
-
+            const referralsRes = await apiFetch(`/api/referrals?status=${filterStatus}&search=${searchTerm}`);
             if (referralsRes.ok) setReferrals(await referralsRes.json());
-            if (statsRes.ok) setStats(await statsRes.json());
         } catch (error) {
             console.error("Fetch data error", error);
         } finally {
@@ -482,31 +471,6 @@ export default function AdminReferrals() {
     );
 }
 
-function MiniStatCard({ title, value, icon: Icon, color }: any) {
-    const colors: any = {
-        slate: "bg-slate-50 text-slate-600 border-slate-100 icon-bg-slate-500",
-        yellow: "bg-yellow-50 text-yellow-600 border-yellow-100 icon-bg-yellow-500",
-        blue: "bg-blue-50 text-blue-600 border-blue-100 icon-bg-blue-500",
-        green: "bg-green-50 text-green-600 border-green-100 icon-bg-green-500",
-        purple: "bg-purple-50 text-purple-600 border-purple-100 icon-bg-purple-500",
-        red: "bg-red-50 text-red-600 border-red-100 icon-bg-red-500",
-    };
-
-    const style = colors[color] || colors.slate;
-    const iconColorClass = style.split('icon-bg-')[1];
-
-    return (
-        <Card className={`border shadow-none ${style.split(' ')[0]} ${style.split(' ')[2]}`}>
-            <CardContent className="p-4 flex flex-col items-center justify-center text-center">
-                <div className={`h-10 w-10 rounded-xl bg-${iconColorClass} flex items-center justify-center text-white mb-2 shadow-sm`}>
-                    <Icon className="h-5 w-5" />
-                </div>
-                <div className="text-xl font-bold text-slate-900">{value}</div>
-                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">{title}</div>
-            </CardContent>
-        </Card>
-    );
-}
 
 function InfoItem({ label, value, icon: Icon }: any) {
     return (
