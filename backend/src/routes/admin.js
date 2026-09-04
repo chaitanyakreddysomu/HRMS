@@ -50,7 +50,7 @@ router.put('/leaves/:id', auth, async (req, res) => {
         const leave = await Leave.findByIdAndUpdate(
             id,
             { status, rejectionReason },
-            { new: true }
+            { returnDocument: 'after' }
         );
 
         if (!leave) return res.status(404).json({ message: "Leave not found" });

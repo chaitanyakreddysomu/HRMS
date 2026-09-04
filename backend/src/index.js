@@ -5,7 +5,7 @@ const dotenv = require('dotenv');
 // Load env vars immediately
 dotenv.config();
 
-const connectDB = require('./db');
+const { connectDB } = require('./db');
 const compression = require('compression');
 require('./config/firebase'); // Init Firebase Admin
 
@@ -18,6 +18,9 @@ app.use(express.json());
 
 // Connect DB
 connectDB();
+
+// Health check (used by mobile app to resolve the correct backend URL)
+app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
 // Routes Placeholder
 app.get('/', (req, res) => {

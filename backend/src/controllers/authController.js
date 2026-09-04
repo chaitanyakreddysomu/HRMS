@@ -123,11 +123,11 @@ exports.register = async (req, res) => {
         const existingUser = await User.findOne({ email });
         if (existingUser) return res.status(400).json({ message: "User already exists" });
 
-        // Auto-generate ID
-        const lastUser = await User.findOne().sort({ createdAt: -1 });
+        // Auto-generate ID — only look at EMP-prefixed users
+        const lastEmpUser = await User.findOne({ id: /^EMP\d+$/ }).sort({ id: -1 });
         let newId = "EMP001";
-        if (lastUser && lastUser.id) {
-            const lastIdNum = parseInt(lastUser.id.replace("EMP", ""), 10);
+        if (lastEmpUser && lastEmpUser.id) {
+            const lastIdNum = parseInt(lastEmpUser.id.replace("EMP", ""), 10);
             if (!isNaN(lastIdNum)) {
                 newId = `EMP${(lastIdNum + 1).toString().padStart(3, '0')}`;
             }

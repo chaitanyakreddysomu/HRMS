@@ -31,7 +31,7 @@ exports.getComplaints = async (req, res) => {
 
 exports.updateComplaint = async (req, res) => {
     try {
-        const updated = await Complaint.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        const updated = await Complaint.findByIdAndUpdate(req.params.id, req.body, { returnDocument: 'after' });
         res.json(updated);
     } catch (err) {
         res.status(500).json({ message: err.message });

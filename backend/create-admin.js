@@ -15,7 +15,11 @@ const createAdmin = async () => {
 
     // 2. Connect to Database
     try {
-        await mongoose.connect(process.env.MONGODB_URI);
+        await mongoose.connect(process.env.MONGODB_URI, {
+            maxPoolSize: 2,
+            serverSelectionTimeoutMS: 10000,
+            connectTimeoutMS: 10000,
+        });
         console.log('✅ Connected to Database');
     } catch (err) {
         console.error('❌ DB Connection Error:', err);

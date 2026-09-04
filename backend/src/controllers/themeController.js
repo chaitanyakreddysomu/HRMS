@@ -18,7 +18,7 @@ exports.updateThemeSettings = async (req, res) => {
     if (!theme) {
       theme = await ThemeSettings.create(req.body);
     } else {
-      theme = await ThemeSettings.findOneAndUpdate({}, req.body, { new: true });
+      theme = await ThemeSettings.findOneAndUpdate({}, req.body, { returnDocument: 'after' });
     }
     res.status(200).json(theme);
   } catch (error) {

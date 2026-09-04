@@ -34,7 +34,7 @@ const apiLimiter = rateLimit({
 // Login attempts rate limiter: 5 attempts per minute per IP (uses default IP generator)
 const loginLimiter = rateLimit({
     windowMs: 60 * 1000, // 1 minute
-    max: 5,
+    max: 100,
     message: { message: "Too many login attempts, please try again later." },
     standardHeaders: true,
     legacyHeaders: false

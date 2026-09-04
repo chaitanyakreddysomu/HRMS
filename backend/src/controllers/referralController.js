@@ -123,8 +123,25 @@ exports.getAllReferrals = async (req, res) => {
             ];
         }
 
-        const referrals = await Referral.find(query).sort({ createdAt: -1 });
-        res.json(referrals);
+        const referrals = await Referral.find(query)
+            .populate('referredBy', 'name role designation profileImage avatar')
+            .sort({ createdAt: -1 });
+
+        // Flatten referrer details for the client
+        const data = referrals.map(ref => {
+            const obj = ref.toObject();
+            const referrer = obj.referredBy || {};
+
+            return {
+                ...obj,
+                referredBy: referrer._id || obj.referredBy,
+                referredByRole: referrer.role || null,
+                referredByDesignation: referrer.designation || null,
+                referredByImage: referrer.profileImage || referrer.avatar || null
+            };
+        });
+
+        res.json(data);
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: "Server Error" });

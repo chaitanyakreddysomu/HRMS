@@ -145,7 +145,7 @@ exports.updateAdminProfile = async (req, res) => {
         const user = await User.findOneAndUpdate(
             { id: req.user.id },
             { $set: updates },
-            { new: true, runValidators: true }
+            { returnDocument: 'after', runValidators: true }
         ).select('-password');
 
         if (!user) return res.status(404).json({ message: "User not found" });
@@ -291,7 +291,7 @@ exports.updateRequestStatus = async (req, res) => {
         const user = await User.findOneAndUpdate(
             { id: id },
             { status: newStatus },
-            { new: true }
+            { returnDocument: 'after' }
         ).select('-password');
 
         if (!user) return res.status(404).json({ message: "Request not found" });
@@ -431,7 +431,7 @@ exports.updatePayslip = async (req, res) => {
         const originalPayslip = await Payslip.findById(id);
         if (!originalPayslip) return res.status(404).json({ message: "Payslip not found" });
 
-        const updatedPayslip = await Payslip.findByIdAndUpdate(id, updates, { new: true });
+        const updatedPayslip = await Payslip.findByIdAndUpdate(id, updates, { returnDocument: 'after' });
 
         // --- NOTIFICATION LOGIC ---
         try {
@@ -674,7 +674,7 @@ exports.updateEmployee = async (req, res) => {
         const user = await User.findOneAndUpdate(
             { id: id },
             { $set: updates },
-            { new: true, runValidators: true }
+            { returnDocument: 'after', runValidators: true }
         ).select('-password');
 
         if (!user) return res.status(404).json({ message: "Employee not found" });
@@ -805,7 +805,7 @@ exports.updateDocumentStatus = async (req, res) => {
         const doc = await Document.findByIdAndUpdate(
             docId,
             updates,
-            { new: true }
+            { returnDocument: 'after' }
         );
 
         if (!doc) return res.status(404).json({ message: "Document not found" });
@@ -1149,7 +1149,7 @@ exports.updateLeaveStatus = async (req, res) => {
         const leave = await Leave.findByIdAndUpdate(
             id,
             updateData,
-            { new: true }
+            { returnDocument: 'after' }
         );
 
         if (!leave) return res.status(404).json({ message: "Leave request not found" });
@@ -1380,7 +1380,7 @@ exports.createHoliday = async (req, res) => {
 exports.updateHoliday = async (req, res) => {
     try {
         const { id } = req.params;
-        const updatedHoliday = await Holiday.findByIdAndUpdate(id, req.body, { new: true });
+        const updatedHoliday = await Holiday.findByIdAndUpdate(id, req.body, { returnDocument: 'after' });
         if (!updatedHoliday) return res.status(404).json({ message: "Holiday not found" });
         res.json(updatedHoliday);
     } catch (error) {
@@ -1575,7 +1575,7 @@ exports.createPolicy = async (req, res) => {
 exports.updatePolicy = async (req, res) => {
     try {
         const { id } = req.params;
-        const updatedPolicy = await Policy.findByIdAndUpdate(id, req.body, { new: true });
+        const updatedPolicy = await Policy.findByIdAndUpdate(id, req.body, { returnDocument: 'after' });
         if (!updatedPolicy) return res.status(404).json({ message: "Policy not found" });
 
         await logger.logAction(req, req.user, 'Policy', 'Update', `Updated policy: ${updatedPolicy.title}`, 'Success');
@@ -1802,7 +1802,7 @@ exports.saveFCMToken = async (req, res) => {
         await User.findOneAndUpdate(
             { id: req.user.id },
             { fcmToken: token }, // Using the new field
-            { new: true }
+            { returnDocument: 'after' }
         );
 
         res.json({ message: "FCM Token updated" });
@@ -1971,7 +1971,7 @@ exports.updateComplaintStatus = async (req, res) => {
         const complaint = await Complaint.findByIdAndUpdate(
             id,
             { status: newStatus },
-            { new: true }
+            { returnDocument: 'after' }
         );
 
         if (!complaint) return res.status(404).json({ message: "Complaint not found" });
@@ -2008,7 +2008,7 @@ exports.getSalaryStructures = async (req, res) => {
 exports.updateSalaryStructure = async (req, res) => {
     try {
         const { id } = req.params;
-        const structure = await SalaryStructure.findByIdAndUpdate(id, req.body, { new: true });
+        const structure = await SalaryStructure.findByIdAndUpdate(id, req.body, { returnDocument: 'after' });
         if (!structure) return res.status(404).json({ message: "Structure not found" });
         res.json(structure);
     } catch (error) {

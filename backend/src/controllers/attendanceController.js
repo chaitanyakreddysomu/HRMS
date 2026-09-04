@@ -221,7 +221,7 @@ exports.getAttendance = async (req, res) => {
 
 exports.updateAttendance = async (req, res) => {
     try {
-        const updated = await Attendance.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        const updated = await Attendance.findByIdAndUpdate(req.params.id, req.body, { returnDocument: 'after' });
         res.json(updated);
     } catch (err) {
         res.status(500).json({ message: err.message });

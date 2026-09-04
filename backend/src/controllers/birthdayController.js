@@ -12,6 +12,28 @@ exports.getTodayBirthdays = async (req, res) => {
         // This ensures notifications are sent at least once per day when someone views the tab
         await exports.checkAndSendBirthdayNotifications();
 
+        // range=month -> today through the last day of the current month
+        if (req.query.range === 'month') {
+            const lastDay = new Date(today.getFullYear(), month, 0).getDate();
+
+            const upcoming = await User.find({
+                $expr: {
+                    $and: [
+                        { $eq: [{ $month: '$dob' }, month] },
+                        { $gte: [{ $dayOfMonth: '$dob' }, day] },
+                        { $lte: [{ $dayOfMonth: '$dob' }, lastDay] }
+                    ]
+                },
+                status: 'Active'
+            }).select('id name email role designation department profileImage dob');
+
+            const sorted = upcoming.sort(
+                (a, b) => new Date(a.dob).getDate() - new Date(b.dob).getDate()
+            );
+
+            return res.json(sorted);
+        }
+
         // MongoDB query to match month and day of dob
         const birthdays = await User.find({
             $expr: {
@@ -21,7 +43,7 @@ exports.getTodayBirthdays = async (req, res) => {
                 ]
             },
             status: 'Active'
-        }).select('id name designation department profileImage dob');
+        }).select('id name email role designation department profileImage dob');
 
         res.json(birthdays);
     } catch (error) {

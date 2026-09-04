@@ -561,7 +561,7 @@ export default function AdminPayslips() {
                     </div>
                     Payslips Management
                 </h1>
-                <p className="text-muted-foreground mt-1 ml-14">Manage employee salaries and view your own payslips.</p>
+                {/* <p className="text-muted-foreground mt-1 ml-14">Manage employee salaries and view your own payslips.</p> */}
             </div>
 
             {/* STATS OVERVIEW */}

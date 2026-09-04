@@ -309,7 +309,7 @@ export default function AdminNotifications() {
                         </div>
                         Notifications Center
                     </h1>
-                    <p className="text-muted-foreground mt-1 ml-14">Admin communications hub.</p>
+                    {/* <p className="text-muted-foreground mt-1 ml-14">Admin communications hub.</p> */}
                 </div>
                 <Button
                     variant={pushEnabled ? "outline" : "default"}

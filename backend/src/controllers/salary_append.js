@@ -24,7 +24,7 @@ exports.getSalaryStructures = async (req, res) => {
 exports.updateSalaryStructure = async (req, res) => {
     try {
         const { id } = req.params;
-        const structure = await SalaryStructure.findByIdAndUpdate(id, req.body, { new: true });
+        const structure = await SalaryStructure.findByIdAndUpdate(id, req.body, { returnDocument: 'after' });
         if (!structure) return res.status(404).json({ message: "Structure not found" });
         res.json(structure);
     } catch (error) {

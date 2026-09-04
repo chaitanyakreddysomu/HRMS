@@ -67,7 +67,7 @@ exports.updateProfile = async (req, res) => {
         const user = await User.findOneAndUpdate(
             { id: req.user.id },
             { $set: filteredUpdates },
-            { new: true, runValidators: true }
+            { returnDocument: 'after', runValidators: true }
         ).select('-password');
 
         if (!user) return res.status(404).json({ message: "User not found" });
@@ -190,7 +190,7 @@ exports.uploadDocument = async (req, res) => {
                 uploadedOn: new Date(),
                 size: 'N/A'
             },
-            { upsert: true, new: true }
+            { upsert: true, returnDocument: 'after' }
         );
 
         res.json({ message: "Document uploaded successfully", document: docEntry });

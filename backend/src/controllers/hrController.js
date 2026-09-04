@@ -274,7 +274,7 @@ exports.updateHRProfile = async (req, res) => {
         const user = await User.findOneAndUpdate(
             filter,
             { $set: updates },
-            { new: true, runValidators: true }
+            { returnDocument: 'after', runValidators: true }
         ).select('-password');
 
         if (!user) {
@@ -332,7 +332,7 @@ exports.updateComplaintStatus = async (req, res) => {
         const complaint = await Complaint.findByIdAndUpdate(
             id,
             { status: newStatus },
-            { new: true }
+            { returnDocument: 'after' }
         );
 
         if (!complaint) return res.status(404).json({ message: "Complaint not found" });
@@ -700,7 +700,7 @@ exports.updateRequestStatus = async (req, res) => {
         const user = await User.findByIdAndUpdate(
             id,
             { status: newStatus },
-            { new: true }
+            { returnDocument: 'after' }
         );
 
         if (!user) {
@@ -850,7 +850,7 @@ exports.updateLeaveStatus = async (req, res) => {
         const leave = await Leave.findByIdAndUpdate(
             id,
             updateData,
-            { new: true }
+            { returnDocument: 'after' }
         );
 
         if (!leave) return res.status(404).json({ message: "Leave request not found" });

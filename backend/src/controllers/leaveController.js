@@ -74,7 +74,7 @@ exports.updateLeaveStatus = async (req, res) => {
         const leave = await Leave.findByIdAndUpdate(
             req.params.id,
             { status, rejectionReason },
-            { new: true }
+            { returnDocument: 'after' }
         );
 
         if (!leave) return res.status(404).json({ message: "Leave not found" });

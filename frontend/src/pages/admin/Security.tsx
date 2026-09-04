@@ -468,9 +468,9 @@ export default function Security() {
                             Security Settings
                         </h1>
 
-                        <p className="text-sm text-muted-foreground mt-1">
+                        {/* <p className="text-sm text-muted-foreground mt-1">
                             Manage your account authentication and security preferences.
-                        </p>
+                        </p> */}
 
                     </div>
 

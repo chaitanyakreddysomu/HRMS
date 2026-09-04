@@ -149,7 +149,7 @@ export default function AdminAttendance() {
                 </div>
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight text-foreground">Attendance Management</h1>
-                    <p className="text-muted-foreground">Monitor and manage employee daily attendance records.</p>
+                    {/* <p className="text-muted-foreground">Monitor and manage employee daily attendance records.</p> */}
                 </div>
             </div>
 

@@ -93,7 +93,7 @@ export default function AdminRequests() {
                     </div>
                     Registration Requests
                 </h1>
-                <p className="text-muted-foreground mt-1 ml-14">Approve or reject new HR and Employee account requests.</p>
+                {/* <p className="text-muted-foreground mt-1 ml-14">Approve or reject new HR and Employee account requests.</p> */}
             </div>
 
             {/* Filters */}
@@ -162,10 +162,10 @@ export default function AdminRequests() {
                                                     <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold border">
                                                         {request.name?.charAt(0)}
                                                     </div>
-                                                    {request.name}
+                                                    <span id="username"> {request.name}</span>
                                                 </div>
                                             </TableCell>
-                                            <TableCell>
+                                            <TableCell> 
                                                 <Badge
                                                     variant="outline"
                                                     className={`font-semibold ${request.role === 'HR'
