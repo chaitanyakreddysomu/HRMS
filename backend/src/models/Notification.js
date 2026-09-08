@@ -7,7 +7,11 @@ const notificationSchema = new mongoose.Schema({
     read: { type: Boolean, default: false },
     to: { type: String, required: true }, // Changed to String ID for 1-to-1 copies
     source: { type: String },
-    type: { type: String, default: 'info' } // alert, success, info
+    type: { type: String, default: 'info' }, // alert, success, info
+    // Where tapping this notification should take the reader.
+    // `category` names the subject, `entityId` the record it is about.
+    category: { type: String }, // leave, complaint, referral, request, payslip
+    entityId: { type: String }
 });
 
 // Performance Indexes

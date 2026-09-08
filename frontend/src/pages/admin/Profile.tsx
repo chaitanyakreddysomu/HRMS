@@ -17,7 +17,7 @@ import {
     Briefcase,
     MapPin,
     Mail,
-    Heart,
+    Heart,  
     AlertCircle,
     Pencil,
     Camera,

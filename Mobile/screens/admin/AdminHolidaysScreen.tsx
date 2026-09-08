@@ -19,7 +19,9 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/AppNavigator";
 import { getAuthSession } from "../../utils/authStorage";
+import { useShellScroll } from "../../components/ScreenActions";
 import { apiFetch, resetBaseUrl } from "../../utils/api";
+import ModalDismiss from "../../components/ModalDismiss";
 
 type Props = NativeStackScreenProps<RootStackParamList, "AdminHolidays">;
 
@@ -65,7 +67,9 @@ const toISO = (d: Date) => {
   return `${d.getFullYear()}-${m}-${day}`;
 };
 
-export default function AdminHolidaysScreen({ navigation }: Props) {
+export default function AdminHolidaysScreen({ navigation, embedded }: Props & { embedded?: boolean }) {
+  const shellScroll = useShellScroll();
+
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -395,57 +399,59 @@ export default function AdminHolidaysScreen({ navigation }: Props) {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#F9FAFB" }}>
+    <SafeAreaView edges={embedded ? [] : undefined} style={{ flex: 1, backgroundColor: "#F9FAFB" }}>
       <StatusBar style="dark" />
 
       {/* HEADER */}
-      <View
-        style={{
-          paddingHorizontal: 24,
-          paddingVertical: 16,
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-between",
-          backgroundColor: "#FFFFFF",
-          borderBottomWidth: 1,
-          borderBottomColor: "#F3F4F6",
-        }}
-      >
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
+      {!embedded && (
+        <View
           style={{
-            width: 44,
-            height: 44,
-            borderRadius: 16,
-            backgroundColor: "#F9FAFB",
-            borderWidth: 1,
-            borderColor: "#E5E7EB",
+            paddingHorizontal: 24,
+            paddingVertical: 16,
+            flexDirection: "row",
             alignItems: "center",
-            justifyContent: "center",
+            justifyContent: "space-between",
+            backgroundColor: "#FFFFFF",
+            borderBottomWidth: 1,
+            borderBottomColor: "#F3F4F6",
           }}
         >
-          <Ionicons name="arrow-back" size={22} color="#374151" />
-        </TouchableOpacity>
-        <Text style={{ color: "#111827", fontSize: 20, fontWeight: "700" }}>Holidays</Text>
-        <TouchableOpacity
-          onPress={() => {
-            resetForm();
-            setFormOpen(true);
-          }}
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 16,
-            backgroundColor: "#EFF6FF",
-            borderWidth: 1,
-            borderColor: "#DBEAFE",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Ionicons name="add" size={24} color="#2563EB" />
-        </TouchableOpacity>
-      </View>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 16,
+              backgroundColor: "#F9FAFB",
+              borderWidth: 1,
+              borderColor: "#E5E7EB",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Ionicons name="arrow-back" size={22} color="#374151" />
+          </TouchableOpacity>
+          <Text style={{ color: "#111827", fontSize: 20, fontWeight: "700" }}>Holidays</Text>
+          <TouchableOpacity
+            onPress={() => {
+              resetForm();
+              setFormOpen(true);
+            }}
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 16,
+              backgroundColor: "#EFF6FF",
+              borderWidth: 1,
+              borderColor: "#DBEAFE",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Ionicons name="add" size={24} color="#2563EB" />
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* TABS + YEAR */}
       <View
@@ -585,7 +591,8 @@ export default function AdminHolidaysScreen({ navigation }: Props) {
         </View>
       ) : tab === "calendar" ? (
         <ScrollView
-          contentContainerStyle={{ padding: 24, paddingBottom: 100 }}
+          {...shellScroll}
+          contentContainerStyle={{ padding: 24, paddingBottom: 150 }}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#2563EB" colors={["#2563EB"]} />
           }
@@ -664,7 +671,8 @@ export default function AdminHolidaysScreen({ navigation }: Props) {
           data={yearHolidays}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => renderHolidayCard(item)}
-          contentContainerStyle={{ padding: 24, paddingBottom: 100 }}
+          {...shellScroll}
+          contentContainerStyle={{ padding: 24, paddingBottom: 150 }}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#2563EB" colors={["#2563EB"]} />
           }
@@ -700,6 +708,7 @@ export default function AdminHolidaysScreen({ navigation }: Props) {
         onRequestClose={() => setSelectedHoliday(null)}
       >
         <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}>
+          <ModalDismiss onPress={() => setSelectedHoliday(null)} />
           <View
             style={{
               backgroundColor: "#FFFFFF",
@@ -893,6 +902,7 @@ export default function AdminHolidaysScreen({ navigation }: Props) {
       {/* ADD / EDIT BOTTOM SHEET */}
       <Modal visible={formOpen} animationType="slide" transparent={true} onRequestClose={resetForm}>
         <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}>
+          <ModalDismiss onPress={resetForm} />
           <View
             style={{
               backgroundColor: "#FFFFFF",

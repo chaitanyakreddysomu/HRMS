@@ -1,5 +1,6 @@
 const Leave = require('../models/Leave');
 const User = require('../models/User');
+const { notifyUser, notifyRoles } = require('../utils/push');
 
 exports.createLeave = async (req, res) => {
     try {
@@ -10,6 +11,25 @@ exports.createLeave = async (req, res) => {
             userName: req.user.name
         });
         const savedLeave = await newLeave.save();
+
+        // Whoever approves leave should hear about it straight away
+        const who = savedLeave.userName || req.user.name || 'An employee';
+
+        const span = savedLeave.startDate
+            ? new Date(savedLeave.startDate).toLocaleDateString('en-GB', {
+                day: '2-digit', month: 'short', year: 'numeric'
+            })
+            : '';
+
+        notifyRoles(['HR', 'ADMIN'], {
+            title: 'New Leave Request',
+            body: `${who} requested ${savedLeave.type} leave${span ? ' from ' + span : ''}.`,
+            type: 'info',
+            source: 'SYSTEM',
+            category: 'leave',
+            entityId: savedLeave._id
+        });
+
         res.status(201).json({
             _id: savedLeave._id,
             userId: savedLeave.userId,
@@ -120,14 +140,15 @@ exports.updateLeaveStatus = async (req, res) => {
                 }
 
                 if (notifTitle) {
-                    // 1. DB Notification
-                    await Notification.create({
+                    // Writes the record and pushes it to every device
+                    // this person has, phone and browser alike
+                    await notifyUser(user.id, {
                         title: notifTitle,
-                        message: notifMessage,
-                        to: user.id,
-                        source: source,
+                        body: notifMessage,
                         type: notifType,
-                        date: new Date()
+                        source: source,
+                        category: 'leave',
+                        entityId: leave._id
                     });
 
                     // 2. FCM Notification

@@ -9,6 +9,7 @@ const Notification = require('../models/Notification');
 const Payslip = require('../models/Payslip');
 const Complaint = require('../models/Complaint');
 const SalaryStructure = require('../models/SalaryStructure');
+const Referral = require('../models/Referral');
 const logger = require('../utils/logger');
 const bcrypt = require('bcryptjs');
 
@@ -94,6 +95,93 @@ exports.getAdminDashboardStats = async (req, res) => {
         }
 
 
+        // 5. TODAY BLOCK (mobile dashboard)
+        // Everything the app used to fake: presence split, referrals,
+        // birthdays and the next holidays.
+        const tomorrow = new Date(today);
+        tomorrow.setDate(today.getDate() + 1);
+
+        const workFromHome = await Attendance.countDocuments({
+            date: { $gte: today, $lt: tomorrow },
+            status: 'WFH'
+        });
+
+        const onLeave = await Leave.countDocuments({
+            status: 'Approved',
+            startDate: { $lte: today },
+            endDate: { $gte: today }
+        });
+
+        const newReferrals = await Referral.countDocuments({
+            appliedOn: { $gte: thirtyDaysAgo }
+        });
+
+        // Birthdays today, matched on day and month only
+        const initialsOf = (name = '') =>
+            name
+                .trim()
+                .split(/\s+/)
+                .slice(0, 2)
+                .map((part) => part.charAt(0).toUpperCase())
+                .join('');
+
+        const birthdayUsers = await User.find(
+            {
+                status: 'Active',
+                dob: { $ne: null },
+                $expr: {
+                    $and: [
+                        { $eq: [{ $dayOfMonth: '$dob' }, today.getDate()] },
+                        { $eq: [{ $month: '$dob' }, today.getMonth() + 1] }
+                    ]
+                }
+            },
+            'id name designation role profileImage dob'
+        ).limit(10);
+
+        // Is it the signed in admin own birthday?
+        const isYourBirthday = birthdayUsers.some(
+            (user) =>
+                String(user.id) === String(req.user.id) ||
+                String(user._id) === String(req.user.mongoId)
+        );
+
+        const birthdays = birthdayUsers.map((user) => ({
+            id: user._id,
+            name: user.name,
+            role: user.designation || user.role || 'Employee',
+            initials: initialsOf(user.name),
+            profileImage: user.profileImage || null
+        }));
+
+        // Next holidays from today onwards
+        const HOLIDAY_COLORS = ['#8B5CF6', '#10B981', '#F59E0B', '#0EA5E9'];
+
+        const upcoming = await Holiday.find({ endDate: { $gte: today } })
+            .sort({ startDate: 1 })
+            .limit(4);
+
+        const holidays = upcoming.map((holiday, index) => ({
+            id: holiday._id,
+            name: holiday.name,
+            type: holiday.type,
+            startDate: holiday.startDate,
+            endDate: holiday.endDate,
+            date: new Date(holiday.startDate).toLocaleDateString('en-GB', {
+                day: 'numeric',
+                month: 'short'
+            }),
+            day: new Date(holiday.startDate).toLocaleDateString('en-US', {
+                weekday: 'long'
+            }),
+            color: HOLIDAY_COLORS[index % HOLIDAY_COLORS.length]
+        }));
+
+        // Open complaints are the real alerts
+        const openComplaints = await Complaint.countDocuments({
+            status: { $in: ['Open', 'Investigating'] }
+        });
+
         // Construct Response
         const responseData = {
             kpi: {
@@ -109,7 +197,15 @@ exports.getAdminDashboardStats = async (req, res) => {
             },
             quickActions: {
                 pendingApprovals: pendingLeaves,
-                alerts: 0 // Placeholder
+                alerts: openComplaints
+            },
+            today: {
+                onLeave,
+                workFromHome,
+                newReferrals,
+                birthdays,
+                holidays,
+                isYourBirthday
             }
         };
 

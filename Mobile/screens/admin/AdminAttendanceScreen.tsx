@@ -20,7 +20,15 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/AppNavigator";
 import { getAuthSession } from "../../utils/authStorage";
+import {
+  toShellOptions,
+  useShellFilters,
+  useShellScroll,
+  useShellSearch,
+} from "../../components/ScreenActions";
 import { apiFetch, resetBaseUrl } from "../../utils/api";
+import { useRegisterScreenAction } from "../../components/ScreenActions";
+import ModalDismiss from "../../components/ModalDismiss";
 
 type Props = NativeStackScreenProps<RootStackParamList, "AdminAttendance">;
 
@@ -52,13 +60,18 @@ const STATUS_OPTIONS = [
   "On Leave",
 ];
 
-export default function AdminAttendanceScreen({ navigation }: Props) {
+export default function AdminAttendanceScreen({ navigation, embedded }: Props & { embedded?: boolean }) {
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [searchTerm, setSearchTerm] = useState("");
+
+  /** the shell header search field drives this page */
+  useShellSearch(setSearchTerm);
+  const shellScroll = useShellScroll();
+
   const [statusFilter, setStatusFilter] = useState("All");
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -173,6 +186,15 @@ export default function AdminAttendanceScreen({ navigation }: Props) {
   // HELPERS
   // ============================================================
   const getInitial = (name?: string) => name?.charAt(0)?.toUpperCase() || "?";
+
+  /** exposes Export to the shell header menu */
+  useRegisterScreenAction("export", handleExport);
+
+  /** exposes the date picker to the shell header menu */
+  useRegisterScreenAction("pickDate", () => {
+    setOpenDropdown(null);
+    setShowDatePicker(true);
+  });
 
   const formatTime = (time?: string | null) => {
     if (!time || time === "--") return "--";
@@ -380,157 +402,182 @@ export default function AdminAttendanceScreen({ navigation }: Props) {
     );
   };
 
+  /** the header menu owns these filters while embedded */
+  useShellFilters([
+    {
+      key: "status",
+      label: "Status",
+      value: statusFilter,
+      defaultValue: "All",
+      options: toShellOptions(STATUS_OPTIONS),
+      onChange: setStatusFilter,
+    },
+  ]);
+
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#F9FAFB" }}>
+    <SafeAreaView edges={embedded ? [] : undefined} style={{ flex: 1, backgroundColor: "#F9FAFB" }}>
       <StatusBar style="dark" />
 
       {/* HEADER */}
-      <View
-        style={{
-          paddingHorizontal: 24,
-          paddingVertical: 16,
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-between",
-          backgroundColor: "#FFFFFF",
-          borderBottomWidth: 1,
-          borderBottomColor: "#F3F4F6",
-        }}
-      >
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 16,
-            backgroundColor: "#F9FAFB",
-            borderWidth: 1,
-            borderColor: "#E5E7EB",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Ionicons name="arrow-back" size={22} color="#374151" />
-        </TouchableOpacity>
-        <Text style={{ color: "#111827", fontSize: 20, fontWeight: "700" }}>Attendance</Text>
-        <TouchableOpacity
-          onPress={onRefresh}
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 16,
-            backgroundColor: "#EFF6FF",
-            borderWidth: 1,
-            borderColor: "#DBEAFE",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Ionicons name="refresh-outline" size={20} color="#2563EB" />
-        </TouchableOpacity>
-      </View>
-
-      {/* SEARCH + FILTERS */}
-      <View
-        style={{
-          paddingHorizontal: 24,
-          paddingTop: 16,
-          paddingBottom: 16,
-          backgroundColor: "#FFFFFF",
-          borderBottomWidth: 1,
-          borderBottomColor: "#F3F4F6",
-          zIndex: 10,
-        }}
-      >
+      {!embedded && (
         <View
           style={{
+            paddingHorizontal: 24,
+            paddingVertical: 16,
             flexDirection: "row",
             alignItems: "center",
-            backgroundColor: "#F9FAFB",
-            borderWidth: 1,
-            borderColor: "#E5E7EB",
-            borderRadius: 12,
-            paddingHorizontal: 12,
-            height: 46,
-            marginBottom: 12,
+            justifyContent: "space-between",
+            backgroundColor: "#FFFFFF",
+            borderBottomWidth: 1,
+            borderBottomColor: "#F3F4F6",
           }}
         >
-          <Ionicons name="search" size={18} color="#9CA3AF" style={{ marginRight: 8 }} />
-          <TextInput
-            placeholder="Search employees..."
-            placeholderTextColor="#9CA3AF"
-            value={searchTerm}
-            onChangeText={setSearchTerm}
-            style={{ flex: 1, color: "#111827", fontSize: 14, fontWeight: "500", height: "100%" }}
-          />
-          {searchTerm.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchTerm("")}>
-              <Ionicons name="close-circle" size={18} color="#9CA3AF" />
-            </TouchableOpacity>
-          )}
-        </View>
-
-        <View style={{ flexDirection: "row", gap: 12, marginBottom: 12 }}>
-          {/* DATE */}
           <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={() => {
-              setOpenDropdown(null);
-              setShowDatePicker(true);
-            }}
+            onPress={() => navigation.goBack()}
             style={{
-              flex: 1,
-              minHeight: 46,
-              paddingHorizontal: 12,
-              borderRadius: 12,
+              width: 44,
+              height: 44,
+              borderRadius: 16,
               backgroundColor: "#F9FAFB",
               borderWidth: 1,
               borderColor: "#E5E7EB",
-              flexDirection: "row",
               alignItems: "center",
-              justifyContent: "space-between",
+              justifyContent: "center",
             }}
           >
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: "#9CA3AF", fontSize: 9, fontWeight: "700", textTransform: "uppercase" }}>
-                Date
-              </Text>
-              <Text style={{ color: "#111827", fontSize: 12, fontWeight: "700", marginTop: 2 }} numberOfLines={1}>
-                {dateString}
-              </Text>
-            </View>
-            <Ionicons name="calendar-outline" size={16} color="#6B7280" />
+            <Ionicons name="arrow-back" size={22} color="#374151" />
           </TouchableOpacity>
-
-          {/* STATUS */}
-          {renderDropdown("status", "Status", statusFilter, STATUS_OPTIONS, setStatusFilter)}
+          <Text style={{ color: "#111827", fontSize: 20, fontWeight: "700" }}>Attendance</Text>
+          <TouchableOpacity
+            onPress={onRefresh}
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 16,
+              backgroundColor: "#EFF6FF",
+              borderWidth: 1,
+              borderColor: "#DBEAFE",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Ionicons name="refresh-outline" size={20} color="#2563EB" />
+          </TouchableOpacity>
         </View>
+      )}
 
-        {/* EXPORT */}
-        <TouchableOpacity
-          activeOpacity={0.8}
-          onPress={handleExport}
-          disabled={exporting}
+      {/* SEARCH + FILTERS */}
+      {!embedded && (
+        <View
           style={{
-            height: 46,
-            borderRadius: 12,
-            backgroundColor: "#2563EB",
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "center",
-            opacity: exporting ? 0.7 : 1,
+            paddingHorizontal: 24,
+            paddingTop: 16,
+            paddingBottom: 16,
+            backgroundColor: "#FFFFFF",
+            borderBottomWidth: 1,
+            borderBottomColor: "#F3F4F6",
+            zIndex: 10,
           }}
         >
-          {exporting ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
-          ) : (
-            <>
-              <Ionicons name="download-outline" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
-              <Text style={{ color: "#FFFFFF", fontWeight: "700", fontSize: 14 }}>Export Report</Text>
-            </>
+          {!embedded && (
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                backgroundColor: "#F9FAFB",
+                borderWidth: 1,
+                borderColor: "#E5E7EB",
+                borderRadius: 12,
+                paddingHorizontal: 12,
+                height: 46,
+                marginBottom: 12,
+              }}
+            >
+              <Ionicons name="search" size={18} color="#9CA3AF" style={{ marginRight: 8 }} />
+              <TextInput
+                placeholder="Search employees..."
+                placeholderTextColor="#9CA3AF"
+                value={searchTerm}
+                onChangeText={setSearchTerm}
+                style={{ flex: 1, color: "#111827", fontSize: 14, fontWeight: "500", height: "100%" }}
+              />
+              {searchTerm.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchTerm("")}>
+                  <Ionicons name="close-circle" size={18} color="#9CA3AF" />
+                </TouchableOpacity>
+              )}
+            </View>
           )}
-        </TouchableOpacity>
-      </View>
+
+          {!embedded && (
+          <View style={{ flexDirection: "row", gap: 12, marginBottom: 12 }}>
+            {/* DATE lives in the shell header menu while embedded */}
+            {!embedded && (
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => {
+                  setOpenDropdown(null);
+                  setShowDatePicker(true);
+                }}
+                style={{
+                  flex: 1,
+                  minHeight: 46,
+                  paddingHorizontal: 12,
+                  borderRadius: 12,
+                  backgroundColor: "#F9FAFB",
+                  borderWidth: 1,
+                  borderColor: "#E5E7EB",
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: "#9CA3AF", fontSize: 9, fontWeight: "700", textTransform: "uppercase" }}>
+                    Date
+                  </Text>
+                  <Text style={{ color: "#111827", fontSize: 12, fontWeight: "700", marginTop: 2 }} numberOfLines={1}>
+                    {dateString}
+                  </Text>
+                </View>
+                <Ionicons name="calendar-outline" size={16} color="#6B7280" />
+              </TouchableOpacity>
+            )}
+
+            {/* STATUS lives in the shell header menu while embedded */}
+            {!embedded &&
+              renderDropdown("status", "Status", statusFilter, STATUS_OPTIONS, setStatusFilter)}
+          </View>
+          )}
+
+          {/* Export lives in the shell header menu when embedded */}
+          {!embedded && (
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={handleExport}
+              disabled={exporting}
+              style={{
+                height: 46,
+                borderRadius: 12,
+                backgroundColor: "#2563EB",
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                opacity: exporting ? 0.7 : 1,
+              }}
+            >
+              {exporting ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <>
+                  <Ionicons name="download-outline" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+                  <Text style={{ color: "#FFFFFF", fontWeight: "700", fontSize: 14 }}>Export Report</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
 
       {showDatePicker && (
         <DateTimePicker
@@ -579,11 +626,11 @@ export default function AdminAttendanceScreen({ navigation }: Props) {
             </TouchableOpacity>
           </View>
         ) : (
-          <FlatList
+          <FlatList {...shellScroll}
             data={filteredRecords}
             keyExtractor={(item, index) => item.id || item._id || `att-${index}`}
             renderItem={renderRecord}
-            contentContainerStyle={{ padding: 24, paddingTop: 12, paddingBottom: 100 }}
+            contentContainerStyle={{ padding: 24, paddingTop: 12, paddingBottom: 150 }}
             refreshControl={
               <RefreshControl
                 refreshing={refreshing}
@@ -621,6 +668,7 @@ export default function AdminAttendanceScreen({ navigation }: Props) {
         onRequestClose={() => setSelectedRecord(null)}
       >
         <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}>
+          <ModalDismiss onPress={() => setSelectedRecord(null)} />
           <View
             style={{
               backgroundColor: "#FFFFFF",

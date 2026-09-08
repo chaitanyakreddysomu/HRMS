@@ -19,7 +19,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/AppNavigator";
 import { getAuthSession } from "../../utils/authStorage";
+import {
+  toShellOptions,
+  useShellFilters,
+  useShellScroll,
+  useShellSearch,
+} from "../../components/ScreenActions";
 import { apiFetch, resetBaseUrl } from "../../utils/api";
+import ModalDismiss from "../../components/ModalDismiss";
 
 type Props = NativeStackScreenProps<RootStackParamList, "AdminPendingRequests">;
 
@@ -37,12 +44,16 @@ interface PendingUser {
   status: string;
 }
 
-export default function PendingRequestsScreen({ navigation }: Props) {
+export default function PendingRequestsScreen({ navigation, embedded }: Props & { embedded?: boolean }) {
   const [requests, setRequests] = useState<PendingUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+
+  /** the shell header search field drives this page */
+  useShellSearch(setSearchTerm);
+  const shellScroll = useShellScroll();
   const [roleFilter, setRoleFilter] = useState("ALL");
   const [selectedRequest, setSelectedRequest] = useState<PendingUser | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
@@ -299,60 +310,76 @@ export default function PendingRequestsScreen({ navigation }: Props) {
   };
 
   // ─────────────────────────────────────────────────────────────────
+  /** the header menu owns this filter while embedded */
+  useShellFilters([
+    {
+      key: "role",
+      label: "Role",
+      value: roleFilter,
+      defaultValue: "ALL",
+      options: toShellOptions(["ALL", "HR", "EMPLOYEE"], (r) =>
+        r === "ALL" ? "All Roles" : r
+      ),
+      onChange: (value) => setRoleFilter(value as typeof roleFilter),
+    },
+  ]);
+
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#F9FAFB" }}>
+    <SafeAreaView edges={embedded ? [] : undefined} style={{ flex: 1, backgroundColor: "#F9FAFB" }}>
       <StatusBar style="dark" />
 
       {/* ── Top Header ── */}
-      <View
-        style={{
-          paddingHorizontal: 24,
-          paddingVertical: 16,
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-between",
-          backgroundColor: "#FFFFFF",
-          borderBottomWidth: 1,
-          borderBottomColor: "#F3F4F6",
-        }}
-      >
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
+      {!embedded && (
+        <View
           style={{
-            width: 44,
-            height: 44,
-            borderRadius: 16,
-            backgroundColor: "#F9FAFB",
-            borderWidth: 1,
-            borderColor: "#E5E7EB",
+            paddingHorizontal: 24,
+            paddingVertical: 16,
+            flexDirection: "row",
             alignItems: "center",
-            justifyContent: "center",
+            justifyContent: "space-between",
+            backgroundColor: "#FFFFFF",
+            borderBottomWidth: 1,
+            borderBottomColor: "#F3F4F6",
           }}
         >
-          <Ionicons name="arrow-back" size={22} color="#374151" />
-        </TouchableOpacity>
-
-        <Text style={{ color: "#111827", fontSize: 20, fontWeight: "700" }}>
-          Pending Requests
-        </Text>
-
-        {/* Refresh button */}
-        <TouchableOpacity
-          onPress={onRefresh}
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 16,
-            backgroundColor: "#EFF6FF",
-            borderWidth: 1,
-            borderColor: "#DBEAFE",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Ionicons name="refresh-outline" size={20} color="#2563EB" />
-        </TouchableOpacity>
-      </View>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 16,
+              backgroundColor: "#F9FAFB",
+              borderWidth: 1,
+              borderColor: "#E5E7EB",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Ionicons name="arrow-back" size={22} color="#374151" />
+          </TouchableOpacity>
+  
+          <Text style={{ color: "#111827", fontSize: 20, fontWeight: "700" }}>
+            Pending Requests
+          </Text>
+  
+          {/* Refresh button */}
+          <TouchableOpacity
+            onPress={onRefresh}
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 16,
+              backgroundColor: "#EFF6FF",
+              borderWidth: 1,
+              borderColor: "#DBEAFE",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Ionicons name="refresh-outline" size={20} color="#2563EB" />
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* ── Count badge ── */}
       {!loading && !error && requests.length > 0 && (
@@ -395,12 +422,12 @@ export default function PendingRequestsScreen({ navigation }: Props) {
         </View>
       )}
 
-      <ScrollView
+      <ScrollView {...shellScroll}
         style={{ flex: 1 }}
         contentContainerStyle={{
           paddingHorizontal: 20,
           paddingTop: 14,
-          paddingBottom: 40,
+          paddingBottom: 150,
         }}
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -413,80 +440,86 @@ export default function PendingRequestsScreen({ navigation }: Props) {
         }
       >
         {/* ── Search & Filter Box ── */}
-        <View
-          style={{
-            backgroundColor: "#FFFFFF",
-            borderRadius: 24,
-            padding: 16,
-            borderWidth: 1,
-            borderColor: "#F3F4F6",
-            marginBottom: 16,
-          }}
-        >
-          {/* Search Input */}
+        {!embedded && (
           <View
             style={{
-              flexDirection: "row",
-              alignItems: "center",
-              backgroundColor: "#F9FAFB",
-              borderRadius: 16,
-              paddingHorizontal: 16,
-              paddingVertical: 12,
+              backgroundColor: "#FFFFFF",
+              borderRadius: 24,
+              padding: 16,
               borderWidth: 1,
-              borderColor: "#E5E7EB",
-              marginBottom: 12,
+              borderColor: "#F3F4F6",
+              marginBottom: 16,
             }}
           >
-            <Ionicons name="search-outline" size={20} color="#9CA3AF" />
-            <TextInput
-              style={{
-                flex: 1,
-                color: "#111827",
-                fontSize: 14,
-                marginLeft: 10,
-                padding: 0,
-              }}
-              placeholder="Search by name, email, phone..."
-              placeholderTextColor="#9CA3AF"
-              value={searchTerm}
-              onChangeText={setSearchTerm}
-              returnKeyType="search"
-            />
-            {searchTerm.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchTerm("")}>
-                <Ionicons name="close-circle" size={18} color="#9CA3AF" />
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {/* Role Filter Pills */}
-          <View style={{ flexDirection: "row", gap: 8 }}>
-            {(["ALL", "HR", "EMPLOYEE"] as const).map((r) => (
-              <TouchableOpacity
-                key={r}
-                onPress={() => setRoleFilter(r)}
+            {/* Search Input */}
+            {!embedded && (
+              <View
                 style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  backgroundColor: "#F9FAFB",
+                  borderRadius: 16,
                   paddingHorizontal: 16,
-                  paddingVertical: 8,
-                  borderRadius: 12,
+                  paddingVertical: 12,
                   borderWidth: 1,
-                  backgroundColor: roleFilter === r ? "#2563EB" : "#F9FAFB",
-                  borderColor: roleFilter === r ? "#2563EB" : "#E5E7EB",
+                  borderColor: "#E5E7EB",
+                  marginBottom: 12,
                 }}
               >
-                <Text
+                <Ionicons name="search-outline" size={20} color="#9CA3AF" />
+                <TextInput
                   style={{
-                    fontSize: 12,
-                    fontWeight: "700",
-                    color: roleFilter === r ? "#FFFFFF" : "#4B5563",
+                    flex: 1,
+                    color: "#111827",
+                    fontSize: 14,
+                    marginLeft: 10,
+                    padding: 0,
                   }}
-                >
-                  {r === "ALL" ? "All Roles" : r}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                  placeholder="Search by name, email, phone..."
+                  placeholderTextColor="#9CA3AF"
+                  value={searchTerm}
+                  onChangeText={setSearchTerm}
+                  returnKeyType="search"
+                />
+                {searchTerm.length > 0 && (
+                  <TouchableOpacity onPress={() => setSearchTerm("")}>
+                    <Ionicons name="close-circle" size={18} color="#9CA3AF" />
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
+
+            {/* Role Filter Pills */}
+            {!embedded && (
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                {(["ALL", "HR", "EMPLOYEE"] as const).map((r) => (
+                  <TouchableOpacity
+                    key={r}
+                    onPress={() => setRoleFilter(r)}
+                    style={{
+                      paddingHorizontal: 16,
+                      paddingVertical: 8,
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      backgroundColor: roleFilter === r ? "#2563EB" : "#F9FAFB",
+                      borderColor: roleFilter === r ? "#2563EB" : "#E5E7EB",
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        fontWeight: "700",
+                        color: roleFilter === r ? "#FFFFFF" : "#4B5563",
+                      }}
+                    >
+                      {r === "ALL" ? "All Roles" : r}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
           </View>
-        </View>
+        )}
 
         {/* ── Requests List ── */}
         {loading ? (

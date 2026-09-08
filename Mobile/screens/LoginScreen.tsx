@@ -1,21 +1,34 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { StatusBar } from "expo-status-bar";
 import {
-  Text,
-  View,
-  TextInput,
-  TouchableOpacity,
+  ActivityIndicator,
+  Animated,
+  Easing,
+  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  ActivityIndicator,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import ConfirmDialog from "../components/ConfirmDialog";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/AppNavigator";
 
-import { saveAuthSession, getAuthSession } from "../utils/authStorage";
+import {
+  saveAuthSession,
+  getAuthSession,
+  clearAuthSession,
+} from "../utils/authStorage";
+import { isBiometricEnabled, verifyBiometric } from "../utils/biometrics";
+import { useToast } from "../components/Toast";
+import { API_BASE_URL, LOCAL_IP } from "../utils/api";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Login">;
 
@@ -26,7 +39,7 @@ type Props = NativeStackScreenProps<RootStackParamList, "Login">;
  *
  * Physical Android/iPhone:
  *   Use your computer's LAN IP:
- *   http://192.168.1.34:5000
+ *   http://<LOCAL_IP>:5000, set in utils/api.ts
  *
  * Android Emulator:
  *   http://10.0.2.2:5000
@@ -36,10 +49,10 @@ type Props = NativeStackScreenProps<RootStackParamList, "Login">;
  *
  * Make sure your backend listens on 0.0.0.0, not only localhost.
  */
-const LOCAL_IP = "192.168.1.34";
-const API_BASE_URL = `http://${LOCAL_IP}:5000`;
 
 const LOGIN_ENDPOINT = `${API_BASE_URL}/api/auth/login`;
+
+const LOGO = require("../assets/ics-logo.png");
 
 export default function LoginScreen({ navigation }: Props) {
   const [email, setEmail] = useState("");
@@ -51,7 +64,55 @@ export default function LoginScreen({ navigation }: Props) {
 
   const [loading, setLoading] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const { showToast } = useToast();
+
+  /** every failure on this screen surfaces as a toast, top right */
+  const showError = (message: string, title = "Login Failed") =>
+    showToast({ type: "error", title, message });
+
+  /** stay signed in on the next launch */
+  const [remember, setRemember] = useState(true);
+  const [forgotOpen, setForgotOpen] = useState(false);
+
+  /**
+   * ============================================================
+   * TWO FACTOR
+   * ============================================================
+   *
+   * The backend answers a password login with twoFactorRequired
+   * and a short lived tempToken. That token is handed to the
+   * TwoFactor screen, which collects the six digit code and
+   * exchanges it for the real session.
+   */
+
+  /**
+   * ============================================================
+   * ENTRANCE ANIMATION (handover from the splash screen)
+   * ============================================================
+   * Pure code driven: the card fades up once the saved-session
+   * check is done, so it never fights the splash fade-out.
+   */
+  const enterOpacity = useRef(new Animated.Value(0)).current;
+  const enterShift = useRef(new Animated.Value(24)).current;
+
+  useEffect(() => {
+    if (checkingSession) return;
+
+    Animated.parallel([
+      Animated.timing(enterOpacity, {
+        toValue: 1,
+        duration: 620,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(enterShift, {
+        toValue: 0,
+        duration: 620,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [checkingSession]);
 
   /**
    * ============================================================
@@ -99,10 +160,44 @@ export default function LoginScreen({ navigation }: Props) {
           mounted &&
           session?.token &&
           session?.user &&
-          session.user.role
+          session.user.role &&
+          session.remember !== false
         ) {
           console.log("Restoring session for:", session.user.email);
           console.log("Restored role:", session.user.role);
+
+          /**
+           * ----------------------------------------------------
+           * BIOMETRIC GATE
+           *
+           * With biometric login on, a saved session is only
+           * handed back after a successful fingerprint or face
+           * check. A failed check drops the session, so this
+           * launch falls through to email, password and 2FA.
+           * ----------------------------------------------------
+           */
+          if (await isBiometricEnabled()) {
+            const passed = await verifyBiometric(
+              "Unlock your HRMS session"
+            );
+
+            if (!mounted) return;
+
+            if (!passed) {
+              console.log("Biometric check failed, session dropped");
+
+              await clearAuthSession();
+
+              showError(
+                "Please sign in with your email and password.",
+                "Biometric Check Failed"
+              );
+
+              return;
+            }
+          }
+
+          if (!mounted) return;
 
           navigateByRole(
             session.user.role,
@@ -140,12 +235,11 @@ export default function LoginScreen({ navigation }: Props) {
     const cleanEmail = email.trim().toLowerCase();
 
     if (!cleanEmail || !password.trim()) {
-      setErrorMsg("Please enter email and password");
+      showError("Please enter your email and password.", "Missing Details");
       return;
     }
 
     setLoading(true);
-    setErrorMsg(null);
 
     console.log("------------------------------------");
     console.log("LOGIN START");
@@ -211,6 +305,24 @@ export default function LoginScreen({ navigation }: Props) {
           `Login failed (${response.status})`;
 
         throw new Error(backendMessage);
+      }
+
+      /**
+       * --------------------------------------------------------
+       * TWO FACTOR CHALLENGE
+       *
+       * No session yet: the backend hands back a short lived
+       * tempToken and waits for the authenticator code.
+       * --------------------------------------------------------
+       */
+      if (data?.twoFactorRequired) {
+        setPassword("");
+        navigation.navigate("TwoFactor", {
+          tempToken: data.tempToken,
+          email: email.trim().toLowerCase(),
+          remember,
+        });
+        return;
       }
 
       /**
@@ -286,6 +398,8 @@ export default function LoginScreen({ navigation }: Props) {
       await saveAuthSession({
         token: accessToken,
 
+        remember,
+
         refreshToken:
           data?.refreshToken ||
           data?.refresh_token ||
@@ -308,6 +422,7 @@ export default function LoginScreen({ navigation }: Props) {
        */
       navigateByRole(normalizedRole, userName);
     } catch (err: any) {
+      
       console.error("------------------------------------");
       console.error("LOGIN ERROR");
       console.error("Error:", err);
@@ -320,20 +435,20 @@ export default function LoginScreen({ navigation }: Props) {
         err?.message?.includes("Network request failed") ||
         err?.message?.includes("Failed to fetch")
       ) {
-        message =
-          `Cannot connect to backend.\n\n` +
-          `Make sure:\n` +
-          `• Backend is running on port 5000\n` +
-          `• Phone and computer are on the same Wi-Fi\n` +
-          `• Backend IP is ${LOCAL_IP}\n` +
-          `• Backend listens on 0.0.0.0`;
+        /** the full checklist stays in the log, the toast stays short */
+        console.log(
+          `Backend unreachable. Check it runs on port 5000 at ${LOCAL_IP}, ` +
+            `listens on 0.0.0.0, and shares the Wi-Fi with this phone.`
+        );
+
+        message = `Cannot reach the backend at ${LOCAL_IP}. Check your Wi-Fi.`;
       } else if (err?.name === "AbortError") {
         message = "Login request timed out. Check your backend connection.";
       } else if (err?.message) {
         message = err.message;
       }
 
-      setErrorMsg(message);
+      showError(message);
     } finally {
       setLoading(false);
     }
@@ -341,291 +456,342 @@ export default function LoginScreen({ navigation }: Props) {
 
   /**
    * ============================================================
-   * CHECKING SAVED SESSION
+   * UI
    * ============================================================
    */
   if (checkingSession) {
     return (
-      <SafeAreaView className="flex-1 bg-gray-50 items-center justify-center">
-        <ActivityIndicator size="large" color="#2563EB" />
-
-        <Text className="text-gray-500 text-xs mt-3 font-semibold">
-          Restoring session...
-        </Text>
-      </SafeAreaView>
+      <View style={styles.booting}>
+        <LinearGradient
+          colors={PASTEL}
+          start={{ x: 0.1, y: 0 }}
+          end={{ x: 0.9, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        <ActivityIndicator size="large" color="#111827" />
+        <Text style={styles.bootingText}>Restoring session</Text>
+      </View>
     );
   }
 
-  /**
-   * ============================================================
-   * UI
-   * ============================================================
-   */
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
+    <View style={styles.root}>
       <StatusBar style="dark" />
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        className="flex-1"
-      >
-        <ScrollView
-          contentContainerStyle={{ flexGrow: 1 }}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <View className="flex-1 px-6 justify-center py-8">
+      {/* soft pastel wash, brightest under the form */}
+      <LinearGradient
+        colors={PASTEL}
+        start={{ x: 0.1, y: 0 }}
+        end={{ x: 0.9, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+      <View style={[styles.blob, styles.blobPink]} pointerEvents="none" />
+      <View style={[styles.blob, styles.blobMint]} pointerEvents="none" />
 
-            {/* ==================================================
-                BRAND HEADER
-            ================================================== */}
-            <View className="items-center mb-8">
-              <View className="w-16 h-16 rounded-2xl items-center justify-center mb-3.5 bg-blue-600 shadow-md shadow-blue-500/30">
+      <SafeAreaView style={styles.safe}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.flex}
+        >
+          <ScrollView
+            contentContainerStyle={styles.scroll}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <Animated.View
+              style={{
+                opacity: enterOpacity,
+                transform: [{ translateY: enterShift }],
+              }}
+            >
+              {/* <Image source={LOGO} style={styles.logo} resizeMode="contain" /> */}
+<Text style={styles.title}>Welcome back 👋</Text>
+<Text style={styles.subtitle}>
+  Log in to your workspace and get started.
+</Text>
+
+
+              {/* ------------------------------------------- email */}
+              <Text style={styles.label}>E-mail</Text>
+              <View style={[styles.field, emailFocused && styles.fieldFocused]}>
                 <Ionicons
-                  name="business"
-                  size={34}
-                  color="#ffffff"
+                  name="mail-outline"
+                  size={19}
+                  color={emailFocused ? "#111827" : "#9CA3AF"}
+                />
+                <TextInput
+                  value={email}
+                  onChangeText={setEmail}
+                  onFocus={() => setEmailFocused(true)}
+                  onBlur={() => setEmailFocused(false)}
+                  placeholder="example@gmail.com"
+                  placeholderTextColor="#9CA3AF"
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  returnKeyType="next"
+                  style={styles.input}
                 />
               </View>
 
-              <Text className="text-gray-900 text-3xl font-bold tracking-tight">
-                HRMS
-              </Text>
-
-              <Text className="text-gray-500 text-xs mt-1 tracking-widest uppercase font-semibold">
-                Human Resource Management
-              </Text>
-            </View>
-
-            {/* ==================================================
-                LOGIN CARD
-            ================================================== */}
-            <View className="rounded-3xl p-6 bg-white border border-gray-200 shadow-xl shadow-gray-200/50">
-
-              <Text className="text-gray-900 text-xl font-bold mb-1">
-                Welcome back
-              </Text>
-
-              <Text className="text-gray-500 text-sm mb-6">
-                Sign in to your account
-              </Text>
-
-              {/* ==================================================
-                  ERROR
-              ================================================== */}
-              {errorMsg ? (
-                <View className="flex-row items-center bg-red-50 border border-red-200 p-3.5 rounded-xl mb-4">
-                  <Ionicons
-                    name="alert-circle-outline"
-                    size={18}
-                    color="#EF4444"
-                  />
-
-                  <Text className="text-red-600 text-xs ml-2.5 flex-1 font-medium">
-                    {errorMsg}
-                  </Text>
-                </View>
-              ) : null}
-
-              {/* ==================================================
-                  EMAIL
-              ================================================== */}
-              <View className="mb-4">
-                <Text className="text-gray-600 text-[11px] font-semibold mb-2 ml-1 tracking-wider uppercase">
-                  Email Address
-                </Text>
-
-                <View
-                  className={`flex-row items-center rounded-xl px-4 py-3.5 bg-gray-50 border ${
-                    emailFocused
-                      ? "border-blue-600 bg-white"
-                      : "border-gray-200"
-                  }`}
+              {/* ---------------------------------------- password */}
+              <Text style={styles.label}>Password</Text>
+              <View
+                style={[styles.field, passwordFocused && styles.fieldFocused]}
+              >
+                <Ionicons
+                  name="lock-closed-outline"
+                  size={19}
+                  color={passwordFocused ? "#111827" : "#9CA3AF"}
+                />
+                <TextInput
+                  value={password}
+                  onChangeText={setPassword}
+                  onFocus={() => setPasswordFocused(true)}
+                  onBlur={() => setPasswordFocused(false)}
+                  placeholder="Enter your password"
+                  placeholderTextColor="#9CA3AF"
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                  returnKeyType="go"
+                  onSubmitEditing={handleLogin}
+                  style={styles.input}
+                />
+                <TouchableOpacity
+                  onPress={() => setShowPassword((shown) => !shown)}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 >
                   <Ionicons
-                    name="mail-outline"
-                    size={18}
-                    color={
-                      emailFocused
-                        ? "#2563EB"
-                        : "#9CA3AF"
-                    }
+                    name={showPassword ? "eye-outline" : "eye-off-outline"}
+                    size={20}
+                    color="#6B7280"
                   />
-
-                  <TextInput
-                    className="flex-1 text-gray-900 text-sm ml-2.5 p-0"
-                    placeholder="you@company.com"
-                    placeholderTextColor="#9CA3AF"
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    autoComplete="email"
-                    value={email}
-                    onChangeText={setEmail}
-                    onFocus={() => setEmailFocused(true)}
-                    onBlur={() => setEmailFocused(false)}
-                    editable={!loading}
-                  />
-                </View>
+                </TouchableOpacity>
               </View>
 
-              {/* ==================================================
-                  PASSWORD
-              ================================================== */}
-              <View className="mb-5">
-                <Text className="text-gray-600 text-[11px] font-semibold mb-2 ml-1 tracking-wider uppercase">
-                  Password
-                </Text>
-
-                <View
-                  className={`flex-row items-center rounded-xl px-4 py-3.5 bg-gray-50 border ${
-                    passwordFocused
-                      ? "border-blue-600 bg-white"
-                      : "border-gray-200"
-                  }`}
+              {/* -------------------------------------------- meta */}
+              <View style={styles.metaRow}>
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={() => setRemember((on) => !on)}
+                  style={styles.rememberRow}
                 >
-                  <Ionicons
-                    name="lock-closed-outline"
-                    size={18}
-                    color={
-                      passwordFocused
-                        ? "#2563EB"
-                        : "#9CA3AF"
-                    }
-                  />
+                  <View style={[styles.checkbox, remember && styles.checkboxOn]}>
+                    {remember && (
+                      <Ionicons name="checkmark" size={13} color="#FFFFFF" />
+                    )}
+                  </View>
+                  <Text style={styles.rememberText}>Remember me</Text>
+                </TouchableOpacity>
 
-                  <TextInput
-                    className="flex-1 text-gray-900 text-sm ml-2.5 p-0"
-                    placeholder="••••••••"
-                    placeholderTextColor="#9CA3AF"
-                    secureTextEntry={!showPassword}
-                    value={password}
-                    onChangeText={setPassword}
-                    onFocus={() => setPasswordFocused(true)}
-                    onBlur={() => setPasswordFocused(false)}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    editable={!loading}
-                    onSubmitEditing={handleLogin}
-                    returnKeyType="done"
-                  />
-
-                  <TouchableOpacity
-                    onPress={() =>
-                      setShowPassword(!showPassword)
-                    }
-                    activeOpacity={0.7}
-                    disabled={loading}
-                  >
-                    <Ionicons
-                      name={
-                        showPassword
-                          ? "eye-outline"
-                          : "eye-off-outline"
-                      }
-                      size={18}
-                      color="#9CA3AF"
-                    />
-                  </TouchableOpacity>
-                </View>
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={() => setForgotOpen(true)}
+                >
+                  <Text style={styles.forgotText}>Forgot password?</Text>
+                </TouchableOpacity>
               </View>
 
-              {/* ==================================================
-                  SIGN IN
-              ================================================== */}
+              {/* ------------------------------------------ action */}
               <TouchableOpacity
                 activeOpacity={0.85}
-                className="rounded-xl py-4 items-center bg-blue-600 shadow-md shadow-blue-500/20"
                 onPress={handleLogin}
                 disabled={loading}
+                style={[styles.button, loading && styles.buttonBusy]}
               >
                 {loading ? (
-                  <View className="flex-row items-center">
-                    <ActivityIndicator color="#ffffff" />
-
-                    <Text className="text-white font-bold text-sm ml-3">
-                      Signing in...
-                    </Text>
-                  </View>
+                  <ActivityIndicator color="#FFFFFF" />
                 ) : (
-                  <Text className="text-white font-bold text-base tracking-wide">
-                    Sign In
-                  </Text>
+                  <Text style={styles.buttonText}>Log in</Text>
                 )}
               </TouchableOpacity>
-            </View>
 
-            {/* ==================================================
-                DEVELOPMENT LOGIN HELPERS
-            ================================================== */}
-            <View className="mt-6 items-center">
-              <Text className="text-gray-400 text-xs mb-2.5 font-medium">
-                Quick Test Login Roles:
+              <Text style={styles.footer}>
+                Trouble signing in? Contact your HR administrator.
               </Text>
+            </Animated.View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
 
-              <View className="flex-row gap-2">
-                <TouchableOpacity
-                  className="bg-white border border-gray-200 px-4 py-2.5 rounded-xl shadow-sm"
-                  disabled={loading}
-                  onPress={() => {
-                    setEmail("admin@company.com");
-                    setPassword("password123");
-                    setErrorMsg(null);
-                  }}
-                >
-                  <Text className="text-blue-600 text-xs font-semibold">
-                    Admin
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  className="bg-white border border-gray-200 px-4 py-2.5 rounded-xl shadow-sm"
-                  disabled={loading}
-                  onPress={() => {
-                    setEmail("hr@company.com");
-                    setPassword("password123");
-                    setErrorMsg(null);
-                  }}
-                >
-                  <Text className="text-blue-600 text-xs font-semibold">
-                    HR
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  className="bg-white border border-gray-200 px-4 py-2.5 rounded-xl shadow-sm"
-                  disabled={loading}
-                  onPress={() => {
-                    setEmail("emp@company.com");
-                    setPassword("password123");
-                    setErrorMsg(null);
-                  }}
-                >
-                  <Text className="text-blue-600 text-xs font-semibold">
-                    Employee
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {/* ==================================================
-                BACKEND DEBUG INFO
-            ================================================== */}
-            <View className="mt-5 items-center">
-              <Text className="text-gray-300 text-[10px]">
-                Backend: {API_BASE_URL}
-              </Text>
-            </View>
-
-            {/* ==================================================
-                FOOTER
-            ================================================== */}
-            <Text className="text-gray-400 text-xs text-center mt-4">
-              ICS · Human Resource Management System
-            </Text>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+      <ConfirmDialog
+        visible={forgotOpen}
+        icon="key-outline"
+        title="Forgot password?"
+        message="Password resets are handled by your HR administrator. Reach out to them and they will issue a new one."
+        onClose={() => setForgotOpen(false)}
+      />
+    </View>
   );
 }
+
+const PASTEL = ["#F6E7F5", "#E7F0F6", "#EAF6E4", "#FBF7E4"] as const;
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: "#F5F3F7",
+  },
+  flex: {
+    flex: 1,
+  },
+  safe: {
+    flex: 1,
+  },
+  scroll: {
+    flexGrow: 1,
+    justifyContent: "center",
+    paddingHorizontal: 26,
+    paddingVertical: 34,
+  },
+
+  booting: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#F5F3F7",
+  },
+  bootingText: {
+    color: "#6B7280",
+    fontSize: 12,
+    fontWeight: "600",
+    marginTop: 12,
+  },
+
+  blob: {
+    position: "absolute",
+    width: 320,
+    height: 320,
+    borderRadius: 160,
+    opacity: 0.5,
+  },
+  blobPink: {
+    top: -110,
+    left: -80,
+    backgroundColor: "#F3D9F2",
+  },
+  blobMint: {
+    bottom: -130,
+    right: -90,
+    backgroundColor: "#DCEFD5",
+  },
+
+  logo: {
+    width: 62,
+    height: 62,
+    alignSelf: "center",
+    marginBottom: 18,
+  },
+
+
+
+  title: {
+    color: "#111827",
+    fontSize: 27,
+    fontWeight: "800",
+    textAlign: "center",
+  },
+  subtitle: {
+    color: "#6B7280",
+    fontSize: 13,
+    lineHeight: 20,
+    textAlign: "center",
+    marginTop: 8,
+    paddingHorizontal: 12,
+  },
+
+  label: {
+    color: "#374151",
+    fontSize: 13,
+    fontWeight: "600",
+    marginTop: 22,
+    marginBottom: 8,
+  },
+  field: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    height: 56,
+    paddingHorizontal: 18,
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: "rgba(17,24,39,0.10)",
+    backgroundColor: "rgba(255,255,255,0.55)",
+  },
+  fieldFocused: {
+    borderColor: "rgba(17,24,39,0.45)",
+    backgroundColor: "rgba(255,255,255,0.78)",
+  },
+  input: {
+    flex: 1,
+    color: "#111827",
+    fontSize: 15,
+    fontWeight: "500",
+    height: "100%",
+  },
+
+  metaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 14,
+  },
+  rememberRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  checkbox: {
+    width: 19,
+    height: 19,
+    borderRadius: 5,
+    borderWidth: 1.5,
+    borderColor: "#9CA3AF",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 9,
+  },
+  checkboxOn: {
+    backgroundColor: "#111827",
+    borderColor: "#111827",
+  },
+  rememberText: {
+    color: "#4B5563",
+    fontSize: 13,
+    fontWeight: "500",
+  },
+  forgotText: {
+    color: "#111827",
+    fontSize: 13,
+    fontWeight: "700",
+  },
+
+
+  button: {
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: "#0B0B0F",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 24,
+    shadowColor: "#0B0B0F",
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 8,
+  },
+  buttonBusy: {
+    opacity: 0.75,
+  },
+  buttonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+
+  footer: {
+    color: "#9CA3AF",
+    fontSize: 12,
+    fontWeight: "500",
+    textAlign: "center",
+    marginTop: 22,
+  },
+});

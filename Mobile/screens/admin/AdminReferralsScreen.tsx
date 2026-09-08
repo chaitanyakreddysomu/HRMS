@@ -18,7 +18,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/AppNavigator";
 import { getAuthSession } from "../../utils/authStorage";
+import {
+  toShellOptions,
+  useShellFilters,
+  useShellScroll,
+  useShellSearch,
+} from "../../components/ScreenActions";
 import { apiFetch, resetBaseUrl } from "../../utils/api";
+import ModalDismiss from "../../components/ModalDismiss";
 
 type Props = NativeStackScreenProps<RootStackParamList, "AdminReferrals">;
 
@@ -110,13 +117,17 @@ const roleTheme = (role?: string) => {
   }
 };
 
-export default function AdminReferralsScreen({ navigation }: Props) {
+export default function AdminReferralsScreen({ navigation, embedded }: Props & { embedded?: boolean }) {
   const [referrals, setReferrals] = useState<Referral[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [searchTerm, setSearchTerm] = useState("");
+
+  /** the shell header search field drives this page */
+  useShellSearch(setSearchTerm);
+  const shellScroll = useShellScroll();
   const [statusFilter, setStatusFilter] = useState("All");
   const [sortBy, setSortBy] = useState("recent");
 
@@ -452,126 +463,137 @@ export default function AdminReferralsScreen({ navigation }: Props) {
 
   const isFresher = selected?.experienceType === "Fresher";
 
+  /** the header menu owns these filters while embedded */
+  useShellFilters([
+    {
+      key: "status",
+      label: "Status",
+      value: statusFilter,
+      defaultValue: "All",
+      options: toShellOptions(STATUS_OPTIONS, (s) =>
+        s === "All" ? "All Status" : s
+      ),
+      onChange: setStatusFilter,
+    },
+    {
+      key: "sort",
+      label: "Sort By",
+      value: sortBy,
+      defaultValue: "recent",
+      options: SORT_OPTIONS.map((o) => ({ value: o.key, label: o.label })),
+      onChange: setSortBy,
+    },
+  ]);
+
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#F9FAFB" }}>
+    <SafeAreaView edges={embedded ? [] : undefined} style={{ flex: 1, backgroundColor: "#F9FAFB" }}>
       <StatusBar style="dark" />
 
       {/* HEADER */}
-      <View
-        style={{
-          paddingHorizontal: 24,
-          paddingVertical: 16,
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-between",
-          backgroundColor: "#FFFFFF",
-          borderBottomWidth: 1,
-          borderBottomColor: "#F3F4F6",
-        }}
-      >
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 16,
-            backgroundColor: "#F9FAFB",
-            borderWidth: 1,
-            borderColor: "#E5E7EB",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Ionicons name="arrow-back" size={22} color="#374151" />
-        </TouchableOpacity>
-        <Text style={{ color: "#111827", fontSize: 20, fontWeight: "700" }}>Referrals</Text>
-        <TouchableOpacity
-          onPress={onRefresh}
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 16,
-            backgroundColor: "#EFF6FF",
-            borderWidth: 1,
-            borderColor: "#DBEAFE",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Ionicons name="refresh-outline" size={20} color="#2563EB" />
-        </TouchableOpacity>
-      </View>
-
-      {/* SEARCH + SORT */}
-      <View
-        style={{
-          paddingHorizontal: 24,
-          paddingTop: 16,
-          paddingBottom: 16,
-          backgroundColor: "#FFFFFF",
-          borderBottomWidth: 1,
-          borderBottomColor: "#F3F4F6",
-          zIndex: 10,
-        }}
-      >
+      {!embedded && (
         <View
           style={{
+            paddingHorizontal: 24,
+            paddingVertical: 16,
             flexDirection: "row",
             alignItems: "center",
-            backgroundColor: "#F9FAFB",
-            borderWidth: 1,
-            borderColor: "#E5E7EB",
-            borderRadius: 12,
-            paddingHorizontal: 12,
-            height: 46,
-            marginBottom: 12,
+            justifyContent: "space-between",
+            backgroundColor: "#FFFFFF",
+            borderBottomWidth: 1,
+            borderBottomColor: "#F3F4F6",
           }}
         >
-          <Ionicons name="search" size={18} color="#9CA3AF" style={{ marginRight: 8 }} />
-          <TextInput
-            placeholder="Search candidate, role or employee..."
-            placeholderTextColor="#9CA3AF"
-            value={searchTerm}
-            onChangeText={setSearchTerm}
-            style={{ flex: 1, color: "#111827", fontSize: 14, fontWeight: "500", height: "100%" }}
-          />
-          {searchTerm.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchTerm("")}>
-              <Ionicons name="close-circle" size={18} color="#9CA3AF" />
-            </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 16,
+              backgroundColor: "#F9FAFB",
+              borderWidth: 1,
+              borderColor: "#E5E7EB",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Ionicons name="arrow-back" size={22} color="#374151" />
+          </TouchableOpacity>
+          <Text style={{ color: "#111827", fontSize: 20, fontWeight: "700" }}>Referrals</Text>
+          <TouchableOpacity
+            onPress={onRefresh}
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 16,
+              backgroundColor: "#EFF6FF",
+              borderWidth: 1,
+              borderColor: "#DBEAFE",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Ionicons name="refresh-outline" size={20} color="#2563EB" />
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* SEARCH + SORT */}
+      {!embedded && (
+        <View
+          style={{
+            paddingHorizontal: 24,
+            paddingTop: 16,
+            paddingBottom: 16,
+            backgroundColor: "#FFFFFF",
+            borderBottomWidth: 1,
+            borderBottomColor: "#F3F4F6",
+            zIndex: 10,
+          }}
+        >
+          {!embedded && (
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                backgroundColor: "#F9FAFB",
+                borderWidth: 1,
+                borderColor: "#E5E7EB",
+                borderRadius: 12,
+                paddingHorizontal: 12,
+                height: 46,
+                marginBottom: 12,
+              }}
+            >
+              <Ionicons name="search" size={18} color="#9CA3AF" style={{ marginRight: 8 }} />
+              <TextInput
+                placeholder="Search candidate, role or employee..."
+                placeholderTextColor="#9CA3AF"
+                value={searchTerm}
+                onChangeText={setSearchTerm}
+                style={{ flex: 1, color: "#111827", fontSize: 14, fontWeight: "500", height: "100%" }}
+              />
+              {searchTerm.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchTerm("")}>
+                  <Ionicons name="close-circle" size={18} color="#9CA3AF" />
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+
+          {!embedded && (
+            <View style={{ flexDirection: "row", gap: 12 }}>
+              {renderDropdown(
+                "status",
+                "Status",
+                statusFilter,
+                STATUS_OPTIONS.map((s) => ({ key: s, label: s === "All" ? "All Status" : s })),
+                setStatusFilter
+              )}
+              {renderDropdown("sort", "Sort By", sortBy, SORT_OPTIONS, setSortBy)}
+            </View>
           )}
         </View>
-
-        <View style={{ flexDirection: "row", gap: 12 }}>
-          {renderDropdown(
-            "status",
-            "Status",
-            statusFilter,
-            STATUS_OPTIONS.map((s) => ({ key: s, label: s === "All" ? "All Status" : s })),
-            setStatusFilter
-          )}
-          {renderDropdown("sort", "Sort By", sortBy, SORT_OPTIONS, setSortBy)}
-        </View>
-      </View>
-
-      {/* COUNT BANNER */}
-      <View
-        style={{
-          paddingHorizontal: 24,
-          paddingTop: 20,
-          paddingBottom: 4,
-          flexDirection: "row",
-          alignItems: "center",
-        }}
-      >
-        <Ionicons name="people-outline" size={14} color="#6B7280" style={{ marginRight: 6 }} />
-        <Text style={{ color: "#6B7280", fontSize: 12, fontWeight: "700" }}>
-          {sorted.length} {sorted.length === 1 ? "referral" : "referrals"}
-        </Text>
-        <Text style={{ color: "#9CA3AF", fontSize: 12, fontWeight: "600", marginLeft: 6 }}>
-          • {SORT_OPTIONS.find((s) => s.key === sortBy)?.label}
-        </Text>
-      </View>
+      )}
 
       {/* LIST */}
       <View style={{ flex: 1 }}>
@@ -595,11 +617,32 @@ export default function AdminReferralsScreen({ navigation }: Props) {
             <ActivityIndicator size="large" color="#2563EB" />
           </View>
         ) : (
-          <FlatList
+          <FlatList {...shellScroll}
             data={sorted}
             keyExtractor={(item, index) => item._id || `ref-${index}`}
             renderItem={renderReferral}
-            contentContainerStyle={{ padding: 24, paddingTop: 12, paddingBottom: 100, flexGrow: 1 }}
+            ListHeaderComponent={
+              <>
+            <View
+              style={{
+                paddingHorizontal: 24,
+                paddingTop: 20,
+                paddingBottom: 4,
+                flexDirection: "row",
+                alignItems: "center",
+              }}
+            >
+              <Ionicons name="people-outline" size={14} color="#6B7280" style={{ marginRight: 6 }} />
+              <Text style={{ color: "#6B7280", fontSize: 12, fontWeight: "700" }}>
+                {sorted.length} {sorted.length === 1 ? "referral" : "referrals"}
+              </Text>
+              <Text style={{ color: "#9CA3AF", fontSize: 12, fontWeight: "600", marginLeft: 6 }}>
+                • {SORT_OPTIONS.find((s) => s.key === sortBy)?.label}
+              </Text>
+            </View>
+              </>
+            }
+            contentContainerStyle={{ padding: 24, paddingTop: 12, paddingBottom: 150, flexGrow: 1 }}
             refreshControl={
               <RefreshControl
                 refreshing={refreshing}
@@ -626,6 +669,7 @@ export default function AdminReferralsScreen({ navigation }: Props) {
         onRequestClose={() => setSelected(null)}
       >
         <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}>
+          <ModalDismiss onPress={() => setSelected(null)} />
           <View
             style={{
               backgroundColor: "#FFFFFF",
@@ -1133,6 +1177,7 @@ export default function AdminReferralsScreen({ navigation }: Props) {
         onRequestClose={() => setStatusSheetOpen(false)}
       >
         <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}>
+          <ModalDismiss onPress={() => setStatusSheetOpen(false)} />
           <View
             style={{
               backgroundColor: "#FFFFFF",

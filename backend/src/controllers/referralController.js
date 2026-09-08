@@ -4,6 +4,7 @@ const Notification = require('../models/Notification');
 const logger = require('../utils/logger');
 const { sendPushToUser } = require('./notificationController');
 const supabase = require('../config/supabase');
+const { notifyUser } = require('../utils/push');
 
 // @desc Upload resume for referral
 // @route POST /api/referrals/upload
@@ -165,11 +166,17 @@ exports.updateReferralStatus = async (req, res) => {
 
         // Notify Employee if status changed
         if (oldStatus !== status) {
-            await notifyEmployee(
-                referral.referredBy,
-                "Referral Status Update",
-                `Your referral ${referral.candidateName}'s status has been changed to ${status}.`
-            );
+            // The employee id, not the Mongo _id: everything downstream
+            // matches recipients on User.id, so an _id here addresses
+            // a notification nobody can ever see.
+            await notifyUser(referral.referredByEmpId, {
+                title: "Referral Status Update",
+                body: `Your referral ${referral.candidateName} is now ${status}.`,
+                type: status === 'Rejected' ? 'alert' : 'success',
+                source: 'HR',
+                category: 'referral',
+                entityId: referral._id
+            });
         }
 
         await logger.logAction(req, req.user, 'Referral', 'Update Status', `Updated status for ${referral.candidateName} to ${status}`, 'Success');

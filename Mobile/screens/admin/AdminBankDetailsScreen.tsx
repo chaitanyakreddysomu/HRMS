@@ -18,7 +18,14 @@ import * as Clipboard from "expo-clipboard";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/AppNavigator";
 import { getAuthSession } from "../../utils/authStorage";
+import {
+  toShellOptions,
+  useShellFilters,
+  useShellScroll,
+  useShellSearch,
+} from "../../components/ScreenActions";
 import { apiFetch, resetBaseUrl } from "../../utils/api";
+import ModalDismiss from "../../components/ModalDismiss";
 
 type Props = NativeStackScreenProps<RootStackParamList, "AdminBankDetails">;
 
@@ -70,7 +77,7 @@ const roleTheme = (role?: string) => {
   }
 };
 
-export default function AdminBankDetailsScreen({ navigation }: Props) {
+export default function AdminBankDetailsScreen({ navigation, embedded }: Props & { embedded?: boolean }) {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -78,6 +85,11 @@ export default function AdminBankDetailsScreen({ navigation }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   const [searchTerm, setSearchTerm] = useState("");
+
+  /** the shell header search field drives this page */
+  useShellSearch(setSearchTerm);
+  const shellScroll = useShellScroll();
+
   const [roleFilter, setRoleFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState("ALL");
 
@@ -402,101 +414,129 @@ export default function AdminBankDetailsScreen({ navigation }: Props) {
 
   const bank = selectedEmployee?.bankDetails;
 
+  /** the header menu owns these filters while embedded */
+  useShellFilters([
+    {
+      key: "role",
+      label: "Roles",
+      value: roleFilter,
+      defaultValue: "ALL",
+      options: toShellOptions(ROLE_OPTIONS, (v) => ROLE_LABELS[v] || v),
+      onChange: setRoleFilter,
+    },
+    {
+      key: "status",
+      label: "Status",
+      value: statusFilter,
+      defaultValue: "ALL",
+      options: toShellOptions(STATUS_OPTIONS, (v) => STATUS_LABELS[v] || v),
+      onChange: setStatusFilter,
+    },
+  ]);
+
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#F9FAFB" }}>
+    <SafeAreaView edges={embedded ? [] : undefined} style={{ flex: 1, backgroundColor: "#F9FAFB" }}>
       <StatusBar style="dark" />
 
       {/* HEADER */}
-      <View
-        style={{
-          paddingHorizontal: 24,
-          paddingVertical: 16,
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-between",
-          backgroundColor: "#FFFFFF",
-          borderBottomWidth: 1,
-          borderBottomColor: "#F3F4F6",
-        }}
-      >
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 16,
-            backgroundColor: "#F9FAFB",
-            borderWidth: 1,
-            borderColor: "#E5E7EB",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Ionicons name="arrow-back" size={22} color="#374151" />
-        </TouchableOpacity>
-        <Text style={{ color: "#111827", fontSize: 20, fontWeight: "700" }}>Bank Details</Text>
-        <TouchableOpacity
-          onPress={onRefresh}
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 16,
-            backgroundColor: "#EFF6FF",
-            borderWidth: 1,
-            borderColor: "#DBEAFE",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Ionicons name="refresh-outline" size={20} color="#2563EB" />
-        </TouchableOpacity>
-      </View>
-
-      {/* SEARCH + FILTERS */}
-      <View
-        style={{
-          paddingHorizontal: 24,
-          paddingTop: 16,
-          paddingBottom: 16,
-          backgroundColor: "#FFFFFF",
-          borderBottomWidth: 1,
-          borderBottomColor: "#F3F4F6",
-          zIndex: 10,
-        }}
-      >
+      {!embedded && (
         <View
           style={{
+            paddingHorizontal: 24,
+            paddingVertical: 16,
             flexDirection: "row",
             alignItems: "center",
-            backgroundColor: "#F9FAFB",
-            borderWidth: 1,
-            borderColor: "#E5E7EB",
-            borderRadius: 12,
-            paddingHorizontal: 12,
-            height: 46,
-            marginBottom: 12,
+            justifyContent: "space-between",
+            backgroundColor: "#FFFFFF",
+            borderBottomWidth: 1,
+            borderBottomColor: "#F3F4F6",
           }}
         >
-          <Ionicons name="search" size={18} color="#9CA3AF" style={{ marginRight: 8 }} />
-          <TextInput
-            placeholder="Search employees, banks or accounts..."
-            placeholderTextColor="#9CA3AF"
-            value={searchTerm}
-            onChangeText={setSearchTerm}
-            style={{ flex: 1, color: "#111827", fontSize: 14, fontWeight: "500", height: "100%" }}
-          />
-          {searchTerm.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchTerm("")}>
-              <Ionicons name="close-circle" size={18} color="#9CA3AF" />
-            </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 16,
+              backgroundColor: "#F9FAFB",
+              borderWidth: 1,
+              borderColor: "#E5E7EB",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Ionicons name="arrow-back" size={22} color="#374151" />
+          </TouchableOpacity>
+          <Text style={{ color: "#111827", fontSize: 20, fontWeight: "700" }}>Bank Details</Text>
+          <TouchableOpacity
+            onPress={onRefresh}
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 16,
+              backgroundColor: "#EFF6FF",
+              borderWidth: 1,
+              borderColor: "#DBEAFE",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Ionicons name="refresh-outline" size={20} color="#2563EB" />
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* SEARCH + FILTERS */}
+      {!embedded && (
+        <View
+          style={{
+            paddingHorizontal: 24,
+            paddingTop: 16,
+            paddingBottom: 16,
+            backgroundColor: "#FFFFFF",
+            borderBottomWidth: 1,
+            borderBottomColor: "#F3F4F6",
+            zIndex: 10,
+          }}
+        >
+          {!embedded && (
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                backgroundColor: "#F9FAFB",
+                borderWidth: 1,
+                borderColor: "#E5E7EB",
+                borderRadius: 12,
+                paddingHorizontal: 12,
+                height: 46,
+                marginBottom: 12,
+              }}
+            >
+              <Ionicons name="search" size={18} color="#9CA3AF" style={{ marginRight: 8 }} />
+              <TextInput
+                placeholder="Search employees, banks or accounts..."
+                placeholderTextColor="#9CA3AF"
+                value={searchTerm}
+                onChangeText={setSearchTerm}
+                style={{ flex: 1, color: "#111827", fontSize: 14, fontWeight: "500", height: "100%" }}
+              />
+              {searchTerm.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchTerm("")}>
+                  <Ionicons name="close-circle" size={18} color="#9CA3AF" />
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+
+          {!embedded && (
+            <View style={{ flexDirection: "row", gap: 12 }}>
+              {renderDropdown("role", "Roles", roleFilter, ROLE_OPTIONS, ROLE_LABELS, setRoleFilter)}
+              {renderDropdown("status", "Status", statusFilter, STATUS_OPTIONS, STATUS_LABELS, setStatusFilter)}
+            </View>
           )}
         </View>
-
-        <View style={{ flexDirection: "row", gap: 12 }}>
-          {renderDropdown("role", "Roles", roleFilter, ROLE_OPTIONS, ROLE_LABELS, setRoleFilter)}
-          {renderDropdown("status", "Status", statusFilter, STATUS_OPTIONS, STATUS_LABELS, setStatusFilter)}
-        </View>
-      </View>
+      )}
 
       {/* LIST */}
       <View style={{ flex: 1 }}>
@@ -516,11 +556,11 @@ export default function AdminBankDetailsScreen({ navigation }: Props) {
             </TouchableOpacity>
           </View>
         ) : (
-          <FlatList
+          <FlatList {...shellScroll}
             data={employees}
             keyExtractor={(item, index) => item.id || item._id || `emp-${index}`}
             renderItem={renderEmployee}
-            contentContainerStyle={{ padding: 24, paddingBottom: 100 }}
+            contentContainerStyle={{ padding: 24, paddingBottom: 150 }}
             refreshControl={
               <RefreshControl
                 refreshing={refreshing}
@@ -558,6 +598,7 @@ export default function AdminBankDetailsScreen({ navigation }: Props) {
         onRequestClose={() => setSelectedEmployee(null)}
       >
         <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}>
+          <ModalDismiss onPress={() => setSelectedEmployee(null)} />
           <View
             style={{
               backgroundColor: "#FFFFFF",

@@ -44,6 +44,14 @@ const userSchema = new mongoose.Schema({
         deviceId: { type: String }, // Unique ID for browser/device instance
         lastActive: { type: Date, default: Date.now }
     }],
+    // Expo push tokens for the mobile app. Kept apart from fcmTokens
+    // because they go to Expo's service, not to Firebase.
+    expoPushTokens: [{
+        token: { type: String },
+        device: { type: String },
+        deviceId: { type: String },
+        lastActive: { type: Date, default: Date.now }
+    }],
     profileImage: { type: String }, // URL from Supabase
     fcmToken: { type: String, default: null }, // Legacy/Single device fallback
     twoFactorSecret: { type: String },

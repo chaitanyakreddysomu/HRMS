@@ -45,4 +45,23 @@ app.use('/api/referrals', require('./routes/referralRoutes'));
 app.use('/api/theme', require('./routes/themeRoutes'));
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+// The current Wi-Fi/Ethernet address, read at boot so the banner never
+// points the mobile app at a stale IP after the network changes.
+function lanAddress() {
+    const nets = require('os').networkInterfaces();
+    for (const addrs of Object.values(nets)) {
+        for (const a of addrs || []) {
+            if (a.family === 'IPv4' && !a.internal && !a.address.startsWith('169.254.')) {
+                return a.address;
+            }
+        }
+    }
+    return 'localhost';
+}
+
+// Bind every interface, not just localhost, so a phone on the same
+// Wi-Fi can reach this over the LAN IP the mobile app is pointed at.
+app.listen(PORT, '0.0.0.0', () =>
+    console.log(`Server running on port ${PORT} (LAN: http://${lanAddress()}:${PORT})`)
+);

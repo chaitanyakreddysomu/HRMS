@@ -1,5 +1,6 @@
 const Complaint = require('../models/Complaint');
 const User = require('../models/User');
+const { notifyRoles } = require('../utils/push');
 
 exports.createComplaint = async (req, res) => {
     try {
@@ -13,6 +14,17 @@ exports.createComplaint = async (req, res) => {
             department: user ? user.department : 'General'
         });
         await newComplaint.save();
+
+        // HR should see a complaint the moment it is raised
+        notifyRoles(['HR', 'ADMIN'], {
+            title: 'New Complaint',
+            body: `${newComplaint.userName || 'An employee'} raised: ${newComplaint.subject}`,
+            type: 'alert',
+            source: 'SYSTEM',
+            category: 'complaint',
+            entityId: newComplaint._id
+        });
+
         res.status(201).json(newComplaint);
     } catch (err) {
         res.status(500).json({ message: err.message });

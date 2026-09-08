@@ -307,8 +307,29 @@ exports.verify2FA = async (req, res) => {
 
 exports.disable2FA = async (req, res) => {
     try {
+        const { code } = req.body;
+        if (!code) return res.status(400).json({ message: "Verification code is required" });
+
         const user = await User.findById(req.user.mongoId);
         if (!user) return res.status(404).json({ message: "User not found" });
+
+        if (!user.twoFactorEnabled || !user.twoFactorSecret) {
+            return res.status(400).json({ message: "Two-Factor Authentication is not enabled" });
+        }
+
+        // Turning the protection off is as sensitive as turning it on,
+        // so it needs a current code from the same authenticator.
+        const verified = speakeasy.totp.verify({
+            secret: user.twoFactorSecret,
+            encoding: 'base32',
+            token: code,
+            window: 1
+        });
+
+        if (!verified) {
+            await logger.logAction(req, user, 'Auth', '2FA', 'Two-Factor Authentication disable rejected: invalid code', 'Failed');
+            return res.status(400).json({ message: "Invalid verification code" });
+        }
 
         user.twoFactorSecret = undefined;
         user.twoFactorEnabled = false;

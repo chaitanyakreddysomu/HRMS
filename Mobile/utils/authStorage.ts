@@ -3,6 +3,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 export interface AuthSession {
   token?: string;
   refreshToken?: string;
+  /** false means do not restore this session on the next launch */
+  remember?: boolean;
   user: {
     id?: string;
     name: string;

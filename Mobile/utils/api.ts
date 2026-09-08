@@ -5,11 +5,21 @@
  * and iOS simulators (localhost / 127.0.0.1).
  */
 
+/**
+ * The one place the backend address lives. Change LOCAL_IP here
+ * and every screen follows.
+ */
+export const LOCAL_IP = "192.168.1.34";
+export const API_PORT = 5000;
+
+/** LAN base, used directly by screens that build their own URLs */
+export const API_BASE_URL = `http://${LOCAL_IP}:${API_PORT}`;
+
 const CANDIDATE_BASES = [
-  "http://192.168.1.34:5000",
-  "http://10.0.2.2:5000",      // Android emulator loopback
-  "http://127.0.0.1:5000",
-  "http://localhost:5000",
+  API_BASE_URL,
+  `http://10.0.2.2:${API_PORT}`, // Android emulator loopback
+  `http://127.0.0.1:${API_PORT}`,
+  `http://localhost:${API_PORT}`,
 ];
 
 let _resolvedBase: string | null = null;

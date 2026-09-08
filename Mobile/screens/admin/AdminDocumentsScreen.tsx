@@ -17,7 +17,14 @@ import * as WebBrowser from "expo-web-browser";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/AppNavigator";
 import { getAuthSession } from "../../utils/authStorage";
+import {
+  toShellOptions,
+  useShellFilters,
+  useShellScroll,
+  useShellSearch,
+} from "../../components/ScreenActions";
 import { apiFetch, resetBaseUrl } from "../../utils/api";
+import ModalDismiss from "../../components/ModalDismiss";
 
 type Props = NativeStackScreenProps<RootStackParamList, "AdminDocuments">;
 
@@ -54,7 +61,7 @@ interface DocItem {
 const TABS: DocCategory[] = ["Government", "Educational", "Personal", "Experience"];
 const STATUS_OPTIONS = ["All", "Pending", "Verified"];
 
-export default function AdminDocumentsScreen({ navigation }: Props) {
+export default function AdminDocumentsScreen({ navigation, embedded }: Props & { embedded?: boolean }) {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -62,6 +69,11 @@ export default function AdminDocumentsScreen({ navigation }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   const [searchTerm, setSearchTerm] = useState("");
+
+  /** the shell header search field drives this page */
+  useShellSearch(setSearchTerm);
+  const shellScroll = useShellScroll();
+
   const [statusFilter, setStatusFilter] = useState("All");
   
   const [page, setPage] = useState(1);
@@ -429,42 +441,62 @@ export default function AdminDocumentsScreen({ navigation }: Props) {
     );
   };
 
+  /** the header menu owns these filters while embedded */
+  useShellFilters([
+    {
+      key: "status",
+      label: "Status",
+      value: statusFilter,
+      defaultValue: "All",
+      options: toShellOptions(STATUS_OPTIONS),
+      onChange: setStatusFilter,
+    },
+  ]);
+
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#F9FAFB" }}>
+    <SafeAreaView edges={embedded ? [] : undefined} style={{ flex: 1, backgroundColor: "#F9FAFB" }}>
       <StatusBar style="dark" />
       {/* HEADER */}
-      <View style={{ paddingHorizontal: 24, paddingVertical: 16, flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "#FFFFFF", borderBottomWidth: 1, borderBottomColor: "#F3F4F6" }}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={{ width: 44, height: 44, borderRadius: 16, backgroundColor: "#F9FAFB", borderWidth: 1, borderColor: "#E5E7EB", alignItems: "center", justifyContent: "center" }}>
-          <Ionicons name="arrow-back" size={22} color="#374151" />
-        </TouchableOpacity>
-        <Text style={{ color: "#111827", fontSize: 20, fontWeight: "700" }}>Documents</Text>
-        <TouchableOpacity onPress={onRefresh} style={{ width: 44, height: 44, borderRadius: 16, backgroundColor: "#EFF6FF", borderWidth: 1, borderColor: "#DBEAFE", alignItems: "center", justifyContent: "center" }}>
-          <Ionicons name="refresh-outline" size={20} color="#2563EB" />
-        </TouchableOpacity>
-      </View>
+      {!embedded && (
+        <View style={{ paddingHorizontal: 24, paddingVertical: 16, flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "#FFFFFF", borderBottomWidth: 1, borderBottomColor: "#F3F4F6" }}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={{ width: 44, height: 44, borderRadius: 16, backgroundColor: "#F9FAFB", borderWidth: 1, borderColor: "#E5E7EB", alignItems: "center", justifyContent: "center" }}>
+            <Ionicons name="arrow-back" size={22} color="#374151" />
+          </TouchableOpacity>
+          <Text style={{ color: "#111827", fontSize: 20, fontWeight: "700" }}>Documents</Text>
+          <TouchableOpacity onPress={onRefresh} style={{ width: 44, height: 44, borderRadius: 16, backgroundColor: "#EFF6FF", borderWidth: 1, borderColor: "#DBEAFE", alignItems: "center", justifyContent: "center" }}>
+            <Ionicons name="refresh-outline" size={20} color="#2563EB" />
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* SEARCH + FILTER */}
-      <View style={{ paddingHorizontal: 24, paddingTop: 16, paddingBottom: 16, backgroundColor: "#FFFFFF", borderBottomWidth: 1, borderBottomColor: "#F3F4F6", zIndex: 10 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: "#F9FAFB", borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 12, paddingHorizontal: 12, height: 46, marginBottom: 12 }}>
-          <Ionicons name="search" size={18} color="#9CA3AF" style={{ marginRight: 8 }} />
-          <TextInput
-            placeholder="Search employees..."
-            placeholderTextColor="#9CA3AF"
-            value={searchTerm}
-            onChangeText={setSearchTerm}
-            style={{ flex: 1, color: "#111827", fontSize: 14, fontWeight: "500", height: "100%" }}
-          />
-          {searchTerm.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchTerm("")}>
-              <Ionicons name="close-circle" size={18} color="#9CA3AF" />
-            </TouchableOpacity>
+      {!embedded && (
+        <View style={{ paddingHorizontal: 24, paddingTop: 16, paddingBottom: 16, backgroundColor: "#FFFFFF", borderBottomWidth: 1, borderBottomColor: "#F3F4F6", zIndex: 10 }}>
+          {!embedded && (
+            <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: "#F9FAFB", borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 12, paddingHorizontal: 12, height: 46, marginBottom: 12 }}>
+              <Ionicons name="search" size={18} color="#9CA3AF" style={{ marginRight: 8 }} />
+              <TextInput
+                placeholder="Search employees..."
+                placeholderTextColor="#9CA3AF"
+                value={searchTerm}
+                onChangeText={setSearchTerm}
+                style={{ flex: 1, color: "#111827", fontSize: 14, fontWeight: "500", height: "100%" }}
+              />
+              {searchTerm.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchTerm("")}>
+                  <Ionicons name="close-circle" size={18} color="#9CA3AF" />
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+
+          {!embedded && (
+            <View style={{ flexDirection: "row", gap: 12 }}>
+              {renderDropdown("status", "Status", statusFilter, STATUS_OPTIONS, setStatusFilter)}
+            </View>
           )}
         </View>
-
-        <View style={{ flexDirection: "row", gap: 12 }}>
-          {renderDropdown("status", "Status", statusFilter, STATUS_OPTIONS, setStatusFilter)}
-        </View>
-      </View>
+      )}
 
       {/* LIST */}
       <View style={{ flex: 1 }}>
@@ -477,11 +509,11 @@ export default function AdminDocumentsScreen({ navigation }: Props) {
             </TouchableOpacity>
           </View>
         ) : (
-          <FlatList
+          <FlatList {...shellScroll}
             data={employees}
             keyExtractor={(item, index) => item.id || item._id || `emp-${index}`}
             renderItem={renderEmployee}
-            contentContainerStyle={{ padding: 24, paddingBottom: 100 }}
+            contentContainerStyle={{ padding: 24, paddingBottom: 150 }}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#2563EB" colors={["#2563EB"]} />}
             onEndReached={loadMore}
             onEndReachedThreshold={0.5}
@@ -512,6 +544,7 @@ export default function AdminDocumentsScreen({ navigation }: Props) {
         onRequestClose={() => setSelectedEmployee(null)}
       >
         <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}>
+          <ModalDismiss onPress={() => setSelectedEmployee(null)} />
           <View style={{ backgroundColor: "#FFFFFF", borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: "90%", flex: 1 }}>
             
             {/* Sheet Header */}
@@ -622,6 +655,7 @@ export default function AdminDocumentsScreen({ navigation }: Props) {
         onRequestClose={() => { setSelectedDoc(null); setRejectingDocId(null); }}
       >
         <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}>
+          <ModalDismiss onPress={() => { setSelectedDoc(null); setRejectingDocId(null); }} />
           <View style={{ backgroundColor: "#FFFFFF", borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40 }}>
             
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>

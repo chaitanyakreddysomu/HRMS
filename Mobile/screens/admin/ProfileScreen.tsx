@@ -17,7 +17,22 @@ import { Ionicons } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/AppNavigator";
 import { getAuthSession } from "../../utils/authStorage";
+import {
+  useRegisterScreenAction,
+  useShellScroll,
+} from "../../components/ScreenActions";
 import * as Clipboard from "expo-clipboard";
+import * as ImagePicker from "expo-image-picker";
+import { API_BASE_URL } from "../../utils/api";
+import { useToast } from "../../components/Toast";
+import {
+  BiometricSupport,
+  getBiometricSupport,
+  isBiometricEnabled,
+  setBiometricEnabled,
+  verifyBiometric,
+} from "../../utils/biometrics";
+import ModalDismiss from "../../components/ModalDismiss";
 
 
 
@@ -77,8 +92,11 @@ function EditField({
   );
 }
 
-export default function ProfileScreen({ navigation }: Props) {
+export default function ProfileScreen({ navigation, embedded }: Props & { embedded?: boolean }) {
   const [securityModalOpen, setSecurityModalOpen] = useState(false);
+
+  /** feeds the shell header backdrop */
+  const shellScroll = useShellScroll();
 
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [securityLoading, setSecurityLoading] = useState(false);
@@ -99,9 +117,133 @@ export default function ProfileScreen({ navigation }: Props) {
   } | null>(null);
 
   const [verificationCode, setVerificationCode] = useState("");
+
+  /** the code that has to be produced before 2FA can be switched off */
+  const [disableOpen, setDisableOpen] = useState(false);
+  const [disableCode, setDisableCode] = useState("");
   const [verificationLoading, setVerificationLoading] = useState(false);
 
   const [copied, setCopied] = useState(false);
+
+  const { showToast } = useToast();
+
+  /*
+   * =========================================
+   * BIOMETRIC LOGIN
+   * =========================================
+   *
+   * This only decides whether a saved session may be restored
+   * when the app is reopened. Logging out still clears the
+   * session, so the next login is always password + 2FA.
+   */
+  const [biometricEnabled, setBiometricEnabledState] = useState(false);
+  const [biometricBusy, setBiometricBusy] = useState(false);
+  const [biometricSupport, setBiometricSupport] = useState<BiometricSupport>({
+    available: false,
+    enrolled: false,
+    label: "Biometric login",
+  });
+
+  useEffect(() => {
+    let mounted = true;
+
+    (async () => {
+      const support = await getBiometricSupport();
+      const enabled = await isBiometricEnabled();
+
+      if (!mounted) return;
+
+      setBiometricSupport(support);
+
+      /** a sensor that was removed or unenrolled cannot stay on */
+      setBiometricEnabledState(enabled && support.available && support.enrolled);
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const toggleBiometric = async () => {
+    if (biometricBusy) return;
+
+    if (!biometricSupport.available) {
+      showToast({
+        type: "error",
+        title: "Not Supported",
+        message: "This device does not have a biometric sensor.",
+      });
+      return;
+    }
+
+    if (!biometricSupport.enrolled) {
+      showToast({
+        type: "warning",
+        title: "Nothing Enrolled",
+        message:
+          "Add a fingerprint or face in your device settings, then try again.",
+      });
+      return;
+    }
+
+    setBiometricBusy(true);
+
+    try {
+      if (biometricEnabled) {
+        /** turning it off is a security change, so prove it is you */
+        const confirmed = await verifyBiometric(
+          "Confirm to turn off biometric login"
+        );
+
+        if (!confirmed) {
+          showToast({
+            type: "error",
+            title: "Not Verified",
+            message: "Biometric login is still on.",
+          });
+
+          return;
+        }
+
+        await setBiometricEnabled(false);
+        setBiometricEnabledState(false);
+
+        showToast({
+          type: "info",
+          title: "Biometric Login Off",
+          message: "You will sign in with your password from now on.",
+        });
+
+        return;
+      }
+
+      /** prove the sensor works before trusting it with the session */
+      const passed = await verifyBiometric("Confirm to enable biometric login");
+
+      if (!passed) {
+        showToast({
+          type: "error",
+          title: "Not Verified",
+          message: "Biometric login was not enabled.",
+        });
+        return;
+      }
+
+      await setBiometricEnabled(true);
+      setBiometricEnabledState(true);
+
+      showToast({
+        type: "success",
+        title: "Biometric Login On",
+        message:
+          "Reopening the app will unlock your session with " +
+          biometricSupport.label.toLowerCase() +
+          ".",
+      });
+    } finally {
+      setBiometricBusy(false);
+    }
+  };
 
   /*
    * Custom popup
@@ -150,21 +292,39 @@ const [editForm, setEditForm] = useState({
 
 const [showDobPicker, setShowDobPicker] = useState(false);
 
+/** the photo chosen in the editor, uploaded only when Save is tapped */
+const [pickedImage, setPickedImage] =
+  useState<ImagePicker.ImagePickerAsset | null>(null);
 
-const [customPopup, setCustomPopup] = useState<{
-  visible: boolean;
-  type: "success" | "error" | "warning" | "confirm";
-  title: string;
-  message: string;
-  confirmText?: string;
-  cancelText?: string;
-  onConfirm?: () => void;
-}>({
-  visible: false,
-  type: "success",
-  title: "",
-  message: "",
-});
+/** bumped after an upload so the cached old photo is not reused */
+const [imageStamp, setImageStamp] = useState(Date.now());
+
+const pickProfileImage = async () => {
+  if (savingProfile) return;
+
+  const permission =
+    await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+  if (!permission.granted) {
+    showToast({
+      type: "warning",
+      title: "Permission Needed",
+      message: "Allow photo access to change your profile picture.",
+    });
+
+    return;
+  }
+
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ["images"],
+    allowsEditing: true,
+    aspect: [1, 1],
+    quality: 0.7,
+  });
+
+  if (!result.canceled) setPickedImage(result.assets[0]);
+};
+
 
 const openEditProfile = () => {
   setEditForm({
@@ -177,6 +337,7 @@ const openEditProfile = () => {
     emergencyContactPhone: profile.emergencyContactPhone || "",
   });
 
+  setPickedImage(null);
   setEditProfileModalOpen(true);
 };
 
@@ -184,29 +345,21 @@ const openEditProfile = () => {
 const handleCloseEditProfile = () => {
   if (savingProfile) return;
 
-  setCustomPopup({
-    visible: true,
-    type: "confirm",
-    title: "Discard Changes?",
-    message:
-      "Your changes have not been saved. Do you want to close the editor?",
-    confirmText: "Discard",
-    cancelText: "Keep Editing",
-    onConfirm: () => {
-      setCustomPopup((prev) => ({
-        ...prev,
-        visible: false,
-      }));
-
-      setEditProfileModalOpen(false);
-    },
-  });
+  showPopup(
+    "warning",
+    "Discard Changes?",
+    "Your changes have not been saved. Do you want to close the editor?",
+    {
+      confirmText: "Discard",
+      cancelText: "Keep Editing",
+      onConfirm: () => setEditProfileModalOpen(false),
+    }
+  );
 };
 
 const handleSaveProfile = async () => {
   if (!editForm.name.trim()) {
-    setCustomPopup({
-      visible: true,
+    showToast({
       type: "error",
       title: "Invalid Name",
       message: "Please enter your full name.",
@@ -220,8 +373,7 @@ const handleSaveProfile = async () => {
     const session = await getAuthSession();
 
     if (!session?.token) {
-      setCustomPopup({
-        visible: true,
+      showToast({
         type: "error",
         title: "Session Expired",
         message: "Please log in again to update your profile.",
@@ -229,10 +381,52 @@ const handleSaveProfile = async () => {
       return;
     }
 
+    /*
+     * The photo goes first, on its own multipart endpoint. A failed
+     * upload stops here so the text fields are not saved against an
+     * image the server never received.
+     */
+    if (pickedImage) {
+      const form = new FormData();
+
+      const name =
+        pickedImage.fileName || pickedImage.uri.split("/").pop() || "photo.jpg";
+
+      form.append("image", {
+        uri: pickedImage.uri,
+        name,
+        type: pickedImage.mimeType || "image/jpeg",
+      } as any);
+
+      const imgRes = await fetch(
+        `${API_BASE_URL}/api/admin/profile-image`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${session.token}`,
+          },
+          body: form,
+        }
+      );
+
+      if (!imgRes.ok) {
+        const imgData = await imgRes.json().catch(() => null);
+
+        showToast({
+          type: "error",
+          title: "Upload Failed",
+          message:
+            imgData?.message || "Could not upload your profile picture.",
+        });
+
+        return;
+      }
+    }
+
     const res = await fetch(
-      "http://192.168.1.34:5000/api/admin/profile",
+      `${API_BASE_URL}/api/admin/profile/edit`,
       {
-        method: "PUT",
+        method: "PATCH",
         headers: {
           Authorization: `Bearer ${session.token}`,
           "Content-Type": "application/json",
@@ -255,8 +449,7 @@ const handleSaveProfile = async () => {
     if (!res.ok) {
       const data = await res.json().catch(() => null);
 
-      setCustomPopup({
-        visible: true,
+      showToast({
         type: "error",
         title: "Update Failed",
         message:
@@ -267,7 +460,8 @@ const handleSaveProfile = async () => {
       return;
     }
 
-    const data = await res.json();
+    const body = await res.json();
+    const data = body?.user || body;
 
     setProfile((prev: any) => ({
   ...prev,
@@ -288,23 +482,24 @@ const handleSaveProfile = async () => {
   emergencyContactPhone:
     data.emergencyContact?.phone ||
     editForm.emergencyContactPhone,
+  profileImage: data.profileImage || prev.profileImage,
 }));
 
+    /** a new file at the same URL needs the cache broken */
+    if (pickedImage) setImageStamp(Date.now());
 
+    setPickedImage(null);
     setEditProfileModalOpen(false);
 
-    setCustomPopup({
-      visible: true,
+    showToast({
       type: "success",
       title: "Profile Updated",
       message: "Your profile information has been updated successfully.",
-      confirmText: "Done",
     });
   } catch (error) {
     console.error("Failed to update profile:", error);
 
-    setCustomPopup({
-      visible: true,
+    showToast({
       type: "error",
       title: "Something Went Wrong",
       message:
@@ -339,6 +534,16 @@ const handleSaveProfile = async () => {
       onCancel?: () => void;
     }
   ) => {
+    /**
+     * Nothing to answer means nothing to block on: errors, the
+     * copy confirmation and other notices leave as a toast in the
+     * top right instead of a popup over the middle of the screen.
+     */
+    if (!options?.onConfirm && !options?.onCancel) {
+      showToast({ type, title, message });
+      return;
+    }
+
     setPopup({
       visible: true,
       type,
@@ -436,7 +641,7 @@ const handleSaveProfile = async () => {
 
         if (session?.token) {
           const res = await fetch(
-            "http://192.168.1.34:5000/api/admin/profile",
+            `${API_BASE_URL}/api/admin/profile`,
             {
               headers: {
                 Authorization: `Bearer ${session.token}`,
@@ -523,7 +728,7 @@ const handleSaveProfile = async () => {
       }
 
       const res = await fetch(
-        "http://192.168.1.34:5000/api/auth/2fa/status",
+        `${API_BASE_URL}/api/auth/2fa/status`,
         {
           headers: {
             Authorization: `Bearer ${session.token}`,
@@ -586,7 +791,7 @@ const handleSaveProfile = async () => {
       }
 
       const res = await fetch(
-        "http://192.168.1.34:5000/api/auth/2fa/setup",
+        `${API_BASE_URL}/api/auth/2fa/setup`,
         {
           method: "POST",
           headers: {
@@ -720,7 +925,7 @@ const handleSaveProfile = async () => {
       }
 
       const res = await fetch(
-        "http://192.168.1.34:5000/api/auth/2fa/verify",
+        `${API_BASE_URL}/api/auth/2fa/verify`,
         {
           method: "POST",
           headers: {
@@ -802,19 +1007,33 @@ const handleSaveProfile = async () => {
    */
 
   const requestDisable2FA = () => {
-    showPopup(
-      "warning",
-      "Disable Two-Factor Authentication?",
-      "After disabling 2FA, your account will no longer require an authenticator verification code during login.",
-      {
-        confirmText: "Disable 2FA",
-        cancelText: "Keep Protection",
-        onConfirm: executeDisable2FA,
-      }
-    );
+    /**
+     * Switching the protection off is as sensitive as switching it
+     * on, so it asks for a current authenticator code rather than a
+     * plain yes or no.
+     */
+    setDisableCode("");
+    setDisableOpen(true);
+  };
+
+  const cancelDisable2FA = () => {
+    setDisableOpen(false);
+    setDisableCode("");
   };
 
   const executeDisable2FA = async () => {
+    const code = disableCode.replace(/\D/g, "");
+
+    if (code.length !== 6) {
+      showPopup(
+        "error",
+        "Code Required",
+        "Enter the 6-digit code from your authenticator app."
+      );
+
+      return;
+    }
+
     try {
       setSecurityLoading(true);
 
@@ -831,13 +1050,14 @@ const handleSaveProfile = async () => {
       }
 
       const res = await fetch(
-        "http://192.168.1.34:5000/api/auth/2fa/disable",
+        `${API_BASE_URL}/api/auth/2fa/disable`,
         {
           method: "POST",
           headers: {
             Authorization: `Bearer ${session.token}`,
             "Content-Type": "application/json",
           },
+          body: JSON.stringify({ code }),
         }
       );
 
@@ -847,6 +1067,9 @@ const handleSaveProfile = async () => {
         setSetupData(null);
         setVerificationCode("");
         setTwoFactorStep("setup");
+
+        setDisableOpen(false);
+        setDisableCode("");
 
         showPopup(
           "success",
@@ -906,6 +1129,10 @@ const handleSaveProfile = async () => {
       return;
     }
 
+    /** never leave a half typed disable code behind */
+    setDisableOpen(false);
+    setDisableCode("");
+
     setSecurityModalOpen(false);
   };
 
@@ -943,42 +1170,48 @@ const handleSaveProfile = async () => {
    * =========================================
    */
 
+  /** exposes the editor to the shell header menu */
+  useRegisterScreenAction("editProfile", openEditProfile);
+
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
+    <SafeAreaView edges={embedded ? [] : undefined} className="flex-1 bg-gray-50">
       <StatusBar style="dark" />
 
       {/* =========================================
           HEADER
       ========================================= */}
 
-      <View className="px-6 py-4 flex-row items-center justify-between bg-white border-b border-gray-100 shadow-sm">
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          className="w-11 h-11 rounded-2xl bg-gray-50 border border-gray-200 items-center justify-center"
-        >
-          <Ionicons name="arrow-back" size={22} color="#374151" />
-        </TouchableOpacity>
-
-        <Text className="text-gray-900 text-xl font-bold">
-          My Profile
-        </Text>
-
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={openEditProfile}
-          className="w-11 h-11 rounded-2xl bg-blue-50 border border-blue-100 items-center justify-center"
-        >
-          <Ionicons name="pencil-outline" size={20} color="#2563EB" />
-        </TouchableOpacity>
-
-      </View>
+      {!embedded && (
+        <View className="px-6 py-4 flex-row items-center justify-between bg-white border-b border-gray-100 shadow-sm">
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            className="w-11 h-11 rounded-2xl bg-gray-50 border border-gray-200 items-center justify-center"
+          >
+            <Ionicons name="arrow-back" size={22} color="#374151" />
+          </TouchableOpacity>
+  
+          <Text className="text-gray-900 text-xl font-bold">
+            My Profile
+          </Text>
+  
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={openEditProfile}
+            className="w-11 h-11 rounded-2xl bg-blue-50 border border-blue-100 items-center justify-center"
+          >
+            <Ionicons name="pencil-outline" size={20} color="#2563EB" />
+          </TouchableOpacity>
+  
+        </View>
+      )}
 
       <ScrollView
+        {...shellScroll}
         className="flex-1"
         contentContainerStyle={{
           paddingHorizontal: 20,
           paddingTop: 20,
-          paddingBottom: 40,
+          paddingBottom: 150,
         }}
         showsVerticalScrollIndicator={false}
       >
@@ -991,7 +1224,9 @@ const handleSaveProfile = async () => {
             <View className="w-32 h-32 rounded-full p-1 bg-white border-2 border-blue-600 shadow-md">
               {profile.profileImage ? (
                 <Image
-                  source={{ uri: profile.profileImage }}
+                  source={{
+                    uri: `${profile.profileImage}?t=${imageStamp}`,
+                  }}
                   className="w-full h-full rounded-full"
                 />
               ) : (
@@ -1232,6 +1467,96 @@ const handleSaveProfile = async () => {
             color={securityIconColor}
           />
         </TouchableOpacity>
+
+        {/* =========================================
+            BIOMETRIC LOGIN
+        ========================================= */}
+
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={toggleBiometric}
+          disabled={biometricBusy || !biometricSupport.available}
+          className={`${
+            biometricEnabled
+              ? "bg-emerald-50"
+              : "bg-white"
+          } rounded-3xl p-5 border ${
+            biometricEnabled ? "border-emerald-200" : "border-gray-200"
+          } flex-row items-center justify-between mb-4`}
+        >
+          <View className="flex-row items-center flex-1">
+            <View
+              className={`w-12 h-12 rounded-2xl ${
+                biometricEnabled ? "bg-emerald-100" : "bg-red-100"
+              } items-center justify-center mr-4`}
+            >
+              <Ionicons
+                name={
+                  biometricSupport.label === "Face unlock"
+                    ? "scan-outline"
+                    : "finger-print"
+                }
+                size={25}
+                color={biometricEnabled ? "#059669" : "#DC2626"}
+              />
+            </View>
+
+            <View className="flex-1">
+              <View className="flex-row items-center">
+                <Text
+                  className={`${
+                    biometricEnabled ? "text-emerald-900" : "text-gray-900"
+                  } font-bold text-base`}
+                >
+                  Biometric Login
+                </Text>
+
+                <View
+                  className={`ml-2 px-2.5 py-1 rounded-full ${
+                    biometricEnabled ? "bg-emerald-100" : "bg-gray-100"
+                  }`}
+                >
+                  <Text
+                    className={`text-[10px] font-extrabold ${
+                      biometricEnabled ? "text-emerald-700" : "text-gray-600"
+                    }`}
+                  >
+                    {biometricEnabled ? "Enabled" : "Disabled"}
+                  </Text>
+                </View>
+              </View>
+
+              <Text
+                className={`${
+                  biometricEnabled ? "text-emerald-700" : "text-gray-500"
+                } text-xs mt-1`}
+              >
+                {!biometricSupport.available
+                  ? "This device has no biometric sensor"
+                  : !biometricSupport.enrolled
+                  ? "Add a fingerprint or face in device settings first"
+                  : biometricEnabled
+                  ? "Reopening the app unlocks with " +
+                    biometricSupport.label.toLowerCase()
+                  : "Unlock the saved session without retyping your password"}
+              </Text>
+            </View>
+          </View>
+
+          {biometricBusy ? (
+            <ActivityIndicator size="small" color="#059669" />
+          ) : (
+            /* off flips the knob to the other end of the track */
+            <Ionicons
+              name="toggle"
+              size={30}
+              color={biometricEnabled ? "#059669" : "#DC2626"}
+              style={
+                biometricEnabled ? undefined : { transform: [{ scaleX: -1 }] }
+              }
+            />
+          )}
+        </TouchableOpacity>
       </ScrollView>
 
       {/* =========================================
@@ -1336,28 +1661,98 @@ const handleSaveProfile = async () => {
                   code during login.
                 </Text>
 
-                <TouchableOpacity
-                  activeOpacity={0.85}
-                  onPress={requestDisable2FA}
-                  disabled={securityLoading}
-                  className="bg-red-600 rounded-2xl py-3.5 items-center"
-                >
-                  {securityLoading ? (
-                    <ActivityIndicator color="#fff" />
-                  ) : (
-                    <View className="flex-row items-center">
-                      <Ionicons
-                        name="shield-outline"
-                        size={18}
-                        color="#fff"
-                      />
+                {disableOpen ? (
+                  /* =========================================
+                     CONFIRM WITH A LIVE CODE
+                  ========================================= */
 
-                      <Text className="text-white font-bold text-sm ml-2">
-                        Disable 2FA Protection
-                      </Text>
+                  <View className="bg-white rounded-2xl p-4 border border-red-200">
+                    <Text className="text-gray-800 text-sm font-bold">
+                      Confirm with your authenticator
+                    </Text>
+
+                    <Text className="text-gray-500 text-xs mt-1 mb-4">
+                      Enter the current 6-digit code to switch off
+                      Two-Factor Authentication.
+                    </Text>
+
+                    <TextInput
+                      value={disableCode}
+                      onChangeText={(value) =>
+                        setDisableCode(value.replace(/\D/g, "").slice(0, 6))
+                      }
+                      keyboardType="number-pad"
+                      maxLength={6}
+                      placeholder="000000"
+                      placeholderTextColor="#9CA3AF"
+                      autoFocus
+                      className="bg-gray-50 border border-gray-200 rounded-2xl h-16 px-4 text-center text-2xl font-bold text-gray-900 tracking-[8px]"
+                    />
+
+                    <View className="flex-row mt-5">
+                      <TouchableOpacity
+                        activeOpacity={0.85}
+                        onPress={cancelDisable2FA}
+                        disabled={securityLoading}
+                        className="flex-1 rounded-2xl py-3.5 items-center bg-gray-100 mr-2"
+                      >
+                        <Text className="text-gray-700 font-bold text-sm">
+                          Keep Protection
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        activeOpacity={0.85}
+                        onPress={executeDisable2FA}
+                        disabled={
+                          securityLoading || disableCode.length !== 6
+                        }
+                        className={`flex-1 rounded-2xl py-3.5 items-center ml-2 ${
+                          disableCode.length === 6
+                            ? "bg-red-600"
+                            : "bg-gray-200"
+                        }`}
+                      >
+                        {securityLoading ? (
+                          <ActivityIndicator color="#fff" />
+                        ) : (
+                          <Text
+                            className={`font-bold text-sm ${
+                              disableCode.length === 6
+                                ? "text-white"
+                                : "text-gray-400"
+                            }`}
+                          >
+                            Disable 2FA
+                          </Text>
+                        )}
+                      </TouchableOpacity>
                     </View>
-                  )}
-                </TouchableOpacity>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    activeOpacity={0.85}
+                    onPress={requestDisable2FA}
+                    disabled={securityLoading}
+                    className="bg-red-600 rounded-2xl py-3.5 items-center"
+                  >
+                    {securityLoading ? (
+                      <ActivityIndicator color="#fff" />
+                    ) : (
+                      <View className="flex-row items-center">
+                        <Ionicons
+                          name="shield-outline"
+                          size={18}
+                          color="#fff"
+                        />
+
+                        <Text className="text-white font-bold text-sm ml-2">
+                          Disable 2FA Protection
+                        </Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                )}
               </View>
             ) : (
               /* =========================================
@@ -1725,6 +2120,13 @@ const handleSaveProfile = async () => {
         }}
       >
         <View className="flex-1 bg-black/50 items-center justify-center px-6">
+          <ModalDismiss onPress={() => {
+          if (popup.cancelText) {
+            handlePopupCancel();
+          } else {
+            closePopup();
+          }
+        }} />
           <View className="w-full max-w-[390px] bg-white rounded-[28px] overflow-hidden shadow-2xl">
             {/* POPUP CONTENT */}
 
@@ -1803,22 +2205,7 @@ const handleSaveProfile = async () => {
   onRequestClose={() => {
     if (savingProfile) return;
 
-    setCustomPopup({
-      visible: true,
-      type: "confirm",
-      title: "Discard Changes?",
-      message:
-        "You have unsaved profile changes. Are you sure you want to close without saving?",
-      confirmText: "Discard",
-      cancelText: "Keep Editing",
-      onConfirm: () => {
-        setCustomPopup((prev) => ({
-          ...prev,
-          visible: false,
-        }));
-        setEditProfileModalOpen(false);
-      },
-    });
+    handleCloseEditProfile();
   }}
 >
   <View className="flex-1 justify-end bg-black/50">
@@ -1827,22 +2214,7 @@ const handleSaveProfile = async () => {
       onPress={() => {
         if (savingProfile) return;
 
-        setCustomPopup({
-          visible: true,
-          type: "confirm",
-          title: "Discard Changes?",
-          message:
-            "You have unsaved profile changes. Are you sure you want to close without saving?",
-          confirmText: "Discard",
-          cancelText: "Keep Editing",
-          onConfirm: () => {
-            setCustomPopup((prev) => ({
-              ...prev,
-              visible: false,
-            }));
-            setEditProfileModalOpen(false);
-          },
-        });
+        handleCloseEditProfile();
       }}
     />
 
@@ -1875,24 +2247,7 @@ const handleSaveProfile = async () => {
 
         <TouchableOpacity
           disabled={savingProfile}
-          onPress={() => {
-            setCustomPopup({
-              visible: true,
-              type: "confirm",
-              title: "Discard Changes?",
-              message:
-                "Your changes have not been saved. Do you want to close the editor?",
-              confirmText: "Discard",
-              cancelText: "Keep Editing",
-              onConfirm: () => {
-                setCustomPopup((prev) => ({
-                  ...prev,
-                  visible: false,
-                }));
-                setEditProfileModalOpen(false);
-              },
-            });
-          }}
+          onPress={handleCloseEditProfile}
           className="w-9 h-9 rounded-full bg-gray-100 items-center justify-center"
         >
           <Ionicons name="close" size={20} color="#6B7280" />
@@ -1907,8 +2262,92 @@ const handleSaveProfile = async () => {
           paddingBottom: 20,
         }}
       >
-        
-       
+        {/* Profile picture */}
+
+        <View className="items-center mb-6">
+          <View className="flex-row items-center">
+            {/* what is on the account right now */}
+
+            <View className="items-center">
+              {profile.profileImage ? (
+                <Image
+                  source={{
+                    uri: `${profile.profileImage}?t=${imageStamp}`,
+                  }}
+                  className="w-20 h-20 rounded-full bg-gray-100"
+                />
+              ) : (
+                <View className="w-20 h-20 rounded-full bg-gray-100 border border-gray-200 items-center justify-center">
+                  <Ionicons name="person" size={36} color="#9CA3AF" />
+                </View>
+              )}
+
+              <Text className="text-gray-400 text-[11px] font-semibold mt-2">
+                Current
+              </Text>
+            </View>
+
+            {/* only once a replacement has been chosen */}
+
+            {!!pickedImage && (
+              <>
+                <Ionicons
+                  name="arrow-forward"
+                  size={18}
+                  color="#9CA3AF"
+                  style={{ marginHorizontal: 14 }}
+                />
+
+                <View className="items-center">
+                  <Image
+                    source={{ uri: pickedImage.uri }}
+                    className="w-20 h-20 rounded-full bg-gray-100 border-2 border-blue-600"
+                  />
+
+                  <Text className="text-blue-600 text-[11px] font-bold mt-2">
+                    New
+                  </Text>
+                </View>
+              </>
+            )}
+          </View>
+
+          <View className="flex-row items-center mt-4">
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={pickProfileImage}
+              disabled={savingProfile}
+              className="h-10 px-4 rounded-2xl bg-blue-600 flex-row items-center"
+            >
+              <Ionicons name="camera" size={16} color="#FFFFFF" />
+
+              <Text className="text-white text-xs font-bold ml-2">
+                {pickedImage ? "Choose another" : "Change photo"}
+              </Text>
+            </TouchableOpacity>
+
+            {!!pickedImage && (
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={() => setPickedImage(null)}
+                disabled={savingProfile}
+                className="h-10 px-4 rounded-2xl bg-gray-100 border border-gray-200 flex-row items-center ml-2"
+              >
+                <Ionicons name="close" size={16} color="#6B7280" />
+
+                <Text className="text-gray-700 text-xs font-bold ml-2">
+                  Undo
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <Text className="text-gray-400 text-xs mt-3">
+            {pickedImage
+              ? "New photo ready, save to apply"
+              : "This is your current profile picture"}
+          </Text>
+        </View>
 
        {/* Full Name */}
 <EditField
@@ -2066,24 +2505,7 @@ const handleSaveProfile = async () => {
         <View className="flex-row gap-3 mt-4">
           <TouchableOpacity
             disabled={savingProfile}
-            onPress={() => {
-              setCustomPopup({
-                visible: true,
-                type: "confirm",
-                title: "Discard Changes?",
-                message:
-                  "Are you sure you want to cancel? Your changes will not be saved.",
-                confirmText: "Discard",
-                cancelText: "Keep Editing",
-                onConfirm: () => {
-                  setCustomPopup((prev) => ({
-                    ...prev,
-                    visible: false,
-                  }));
-                  setEditProfileModalOpen(false);
-                },
-              });
-            }}
+            onPress={handleCloseEditProfile}
             className="flex-1 h-12 rounded-2xl bg-gray-100 border border-gray-200 items-center justify-center"
           >
             <Text className="text-gray-700 font-bold">

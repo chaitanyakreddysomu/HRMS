@@ -1,6 +1,8 @@
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import SplashScreen from "../screens/SplashScreen";
 import LoginScreen from "../screens/LoginScreen";
+import TwoFactorScreen from "../screens/TwoFactorScreen";
 import AdminDashboardScreen from "../screens/AdminDashboardScreen";
 import HrDashboardScreen from "../screens/HrDashboardScreen";
 import UserDashboardScreen from "../screens/UserDashboardScreen";
@@ -21,7 +23,9 @@ import AdminComplaintsScreen from "../screens/admin/AdminComplaintsScreen";
 import AdminPayslipsScreen from "../screens/admin/AdminPayslipsScreen";
 
 export type RootStackParamList = {
+  Splash: undefined;
   Login: undefined;
+  TwoFactor: { tempToken: string; email?: string; remember: boolean };
   AdminDashboard: { role?: string; name?: string } | undefined;
   HrDashboard: { role?: string; name?: string } | undefined;
   UserDashboard: { role?: string; name?: string } | undefined;
@@ -46,10 +50,24 @@ export default function AppNavigator() {
   return (
     <NavigationContainer>
       <Stack.Navigator
-        initialRouteName="Login"
-        screenOptions={{ headerShown: false }}
+        initialRouteName="Splash"
+        screenOptions={{ headerShown: false, animation: "fade" }}
       >
-        <Stack.Screen name="Login" component={LoginScreen} />
+        <Stack.Screen
+          name="Splash"
+          component={SplashScreen}
+          options={{ animation: "fade", gestureEnabled: false }}
+        />
+        <Stack.Screen
+          name="Login"
+          component={LoginScreen}
+          options={{ animation: "fade", animationDuration: 600, gestureEnabled: false }}
+        />
+        <Stack.Screen
+          name="TwoFactor"
+          component={TwoFactorScreen}
+          options={{ animation: "slide_from_right" }}
+        />
         <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
         <Stack.Screen name="HrDashboard" component={HrDashboardScreen} />
         <Stack.Screen name="UserDashboard" component={UserDashboardScreen} />

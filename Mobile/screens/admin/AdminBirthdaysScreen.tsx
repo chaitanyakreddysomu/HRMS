@@ -15,6 +15,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/AppNavigator";
 import { getAuthSession } from "../../utils/authStorage";
+import {
+  useShellScroll,
+  useShellSearch,
+} from "../../components/ScreenActions";
 import { apiFetch, resetBaseUrl } from "../../utils/api";
 
 type Props = NativeStackScreenProps<RootStackParamList, "AdminBirthdays">;
@@ -48,12 +52,16 @@ const roleTheme = (role?: string) => {
   }
 };
 
-export default function AdminBirthdaysScreen({ navigation }: Props) {
+export default function AdminBirthdaysScreen({ navigation, embedded }: Props & { embedded?: boolean }) {
   const [users, setUsers] = useState<BirthdayUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+
+  /** the shell header search field drives this page */
+  useShellSearch(setSearchTerm);
+  const shellScroll = useShellScroll();
 
   const requestIdRef = useRef(0);
 
@@ -261,112 +269,99 @@ export default function AdminBirthdaysScreen({ navigation }: Props) {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#F9FAFB" }}>
+    <SafeAreaView edges={embedded ? [] : undefined} style={{ flex: 1, backgroundColor: "#F9FAFB" }}>
       <StatusBar style="dark" />
 
       {/* HEADER */}
-      <View
-        style={{
-          paddingHorizontal: 24,
-          paddingVertical: 16,
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-between",
-          backgroundColor: "#FFFFFF",
-          borderBottomWidth: 1,
-          borderBottomColor: "#F3F4F6",
-        }}
-      >
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 16,
-            backgroundColor: "#F9FAFB",
-            borderWidth: 1,
-            borderColor: "#E5E7EB",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Ionicons name="arrow-back" size={22} color="#374151" />
-        </TouchableOpacity>
-        <Text style={{ color: "#111827", fontSize: 20, fontWeight: "700" }}>Birthdays</Text>
-        <TouchableOpacity
-          onPress={onRefresh}
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 16,
-            backgroundColor: "#EFF6FF",
-            borderWidth: 1,
-            borderColor: "#DBEAFE",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Ionicons name="refresh-outline" size={20} color="#2563EB" />
-        </TouchableOpacity>
-      </View>
-
-      {/* SEARCH */}
-      <View
-        style={{
-          paddingHorizontal: 24,
-          paddingTop: 16,
-          paddingBottom: 16,
-          backgroundColor: "#FFFFFF",
-          borderBottomWidth: 1,
-          borderBottomColor: "#F3F4F6",
-        }}
-      >
+      {!embedded && (
         <View
           style={{
+            paddingHorizontal: 24,
+            paddingVertical: 16,
             flexDirection: "row",
             alignItems: "center",
-            backgroundColor: "#F9FAFB",
-            borderWidth: 1,
-            borderColor: "#E5E7EB",
-            borderRadius: 12,
-            paddingHorizontal: 12,
-            height: 46,
+            justifyContent: "space-between",
+            backgroundColor: "#FFFFFF",
+            borderBottomWidth: 1,
+            borderBottomColor: "#F3F4F6",
           }}
         >
-          <Ionicons name="search" size={18} color="#9CA3AF" style={{ marginRight: 8 }} />
-          <TextInput
-            placeholder="Search colleagues..."
-            placeholderTextColor="#9CA3AF"
-            value={searchTerm}
-            onChangeText={setSearchTerm}
-            style={{ flex: 1, color: "#111827", fontSize: 14, fontWeight: "500", height: "100%" }}
-          />
-          {searchTerm.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchTerm("")}>
-              <Ionicons name="close-circle" size={18} color="#9CA3AF" />
-            </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 16,
+              backgroundColor: "#F9FAFB",
+              borderWidth: 1,
+              borderColor: "#E5E7EB",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Ionicons name="arrow-back" size={22} color="#374151" />
+          </TouchableOpacity>
+          <Text style={{ color: "#111827", fontSize: 20, fontWeight: "700" }}>Birthdays</Text>
+          <TouchableOpacity
+            onPress={onRefresh}
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 16,
+              backgroundColor: "#EFF6FF",
+              borderWidth: 1,
+              borderColor: "#DBEAFE",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Ionicons name="refresh-outline" size={20} color="#2563EB" />
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* SEARCH */}
+      {!embedded && (
+        <View
+          style={{
+            paddingHorizontal: 24,
+            paddingTop: 16,
+            paddingBottom: 16,
+            backgroundColor: "#FFFFFF",
+            borderBottomWidth: 1,
+            borderBottomColor: "#F3F4F6",
+          }}
+        >
+          {!embedded && (
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                backgroundColor: "#F9FAFB",
+                borderWidth: 1,
+                borderColor: "#E5E7EB",
+                borderRadius: 12,
+                paddingHorizontal: 12,
+                height: 46,
+              }}
+            >
+              <Ionicons name="search" size={18} color="#9CA3AF" style={{ marginRight: 8 }} />
+              <TextInput
+                placeholder="Search colleagues..."
+                placeholderTextColor="#9CA3AF"
+                value={searchTerm}
+                onChangeText={setSearchTerm}
+                style={{ flex: 1, color: "#111827", fontSize: 14, fontWeight: "500", height: "100%" }}
+              />
+              {searchTerm.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchTerm("")}>
+                  <Ionicons name="close-circle" size={18} color="#9CA3AF" />
+                </TouchableOpacity>
+              )}
+            </View>
           )}
         </View>
-      </View>
-
-      {/* RANGE BANNER */}
-      <View
-        style={{
-          paddingHorizontal: 24,
-          paddingTop: 20,
-          paddingBottom: 4,
-          flexDirection: "row",
-          alignItems: "center",
-        }}
-      >
-        <Ionicons name="gift-outline" size={14} color="#6B7280" style={{ marginRight: 6 }} />
-        <Text style={{ color: "#6B7280", fontSize: 12, fontWeight: "700" }}>
-          {monthName} {todayDate} - {lastDay}
-        </Text>
-        <Text style={{ color: "#9CA3AF", fontSize: 12, fontWeight: "600", marginLeft: 6 }}>
-          • {filtered.length} {filtered.length === 1 ? "birthday" : "birthdays"}
-        </Text>
-      </View>
+      )}
 
       {/* BODY */}
       {error ? (
@@ -388,6 +383,28 @@ export default function AdminBirthdaysScreen({ navigation }: Props) {
         </View>
       ) : (
         <SectionList
+          {...shellScroll}
+          ListHeaderComponent={
+            <>
+            <View
+              style={{
+                paddingHorizontal: 24,
+                paddingTop: 20,
+                paddingBottom: 4,
+                flexDirection: "row",
+                alignItems: "center",
+              }}
+            >
+              <Ionicons name="gift-outline" size={14} color="#6B7280" style={{ marginRight: 6 }} />
+              <Text style={{ color: "#6B7280", fontSize: 12, fontWeight: "700" }}>
+                {monthName} {todayDate} - {lastDay}
+              </Text>
+              <Text style={{ color: "#9CA3AF", fontSize: 12, fontWeight: "600", marginLeft: 6 }}>
+                • {filtered.length} {filtered.length === 1 ? "birthday" : "birthdays"}
+              </Text>
+            </View>
+            </>
+          }
           sections={sections}
           keyExtractor={(item, index) => item.id || item._id || `bday-${index}`}
           renderItem={({ item, section }) => renderUser(item, section.title === "Today")}
@@ -406,7 +423,7 @@ export default function AdminBirthdaysScreen({ navigation }: Props) {
             </Text>
           )}
           stickySectionHeadersEnabled={false}
-          contentContainerStyle={{ padding: 24, paddingTop: 12, paddingBottom: 100, flexGrow: 1 }}
+          contentContainerStyle={{ padding: 24, paddingTop: 12, paddingBottom: 150, flexGrow: 1 }}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#2563EB" colors={["#2563EB"]} />
           }

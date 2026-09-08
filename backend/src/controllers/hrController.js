@@ -6,6 +6,7 @@ const Notification = require('../models/Notification'); // Added
 const Payslip = require('../models/Payslip');
 const supabase = require('../config/supabase');
 const logger = require('../utils/logger');
+const { notifyUser, notifyRoles } = require('../utils/push');
 
 exports.uploadProfileImage = async (req, res) => {
     try {
@@ -311,8 +312,27 @@ exports.getAllEmployeeComplaints = async (req, res) => {
             ];
         }
 
-        const complaints = await Complaint.find(query).sort({ date: -1 });
-        res.json(complaints);
+        const complaints = await Complaint.find(query).sort({ date: -1 }).lean();
+
+        // The list shows who raised it, so it carries their photo and id
+        const raiserIds = [...new Set(complaints.map(c => c.userId))];
+        const raisers = await User.find({ id: { $in: raiserIds } })
+            .select('id name email department profileImage avatar');
+
+        const raiserMap = {};
+        raisers.forEach(u => raiserMap[u.id] = u);
+
+        const enriched = complaints.map(complaint => ({
+            ...complaint,
+            userName: complaint.userName || raiserMap[complaint.userId]?.name,
+            email: raiserMap[complaint.userId]?.email,
+            empId: complaint.userId,
+            department: complaint.department || raiserMap[complaint.userId]?.department,
+            profileImage: raiserMap[complaint.userId]?.profileImage,
+            avatar: raiserMap[complaint.userId]?.avatar
+        }));
+
+        res.json(enriched);
     } catch (error) {
         console.error("Get All Employee Complaints Error:", error);
         res.status(500).json({ message: "Server Error" });
@@ -336,6 +356,17 @@ exports.updateComplaintStatus = async (req, res) => {
         );
 
         if (!complaint) return res.status(404).json({ message: "Complaint not found" });
+
+        // The person who raised it hears how it went
+        notifyUser(complaint.userId, {
+            title: `Complaint ${newStatus}`,
+            body: `Your complaint "${complaint.subject}" is now ${newStatus.toLowerCase()}.`,
+            type: newStatus === 'Resolved' ? 'success' : 'info',
+            source: 'HR',
+            category: 'complaint',
+            entityId: complaint._id
+        });
+
         res.json(complaint);
     } catch (error) {
         console.error("Update Complaint Status Error:", error);
@@ -703,6 +734,20 @@ exports.updateRequestStatus = async (req, res) => {
             { returnDocument: 'after' }
         );
 
+        if (user) {
+            // Let the applicant know either way
+            notifyUser(user.id, {
+                title: newStatus === 'Active' ? 'Account Approved' : 'Account Rejected',
+                body: newStatus === 'Active'
+                    ? 'Your account has been approved. You can sign in now.'
+                    : 'Your account request was not approved.',
+                type: newStatus === 'Active' ? 'success' : 'alert',
+                source: 'HR',
+                category: 'request',
+                entityId: user._id
+            });
+        }
+
         if (!user) {
             return res.status(404).json({ message: "User not found" });
         }
@@ -770,12 +815,15 @@ exports.getLeaveRequests = async (req, res) => {
 
         // Enrich with Profile Image
         const userIds = [...new Set(leaves.map(l => l.userId))];
-        const users = await User.find({ id: { $in: userIds } }).select('id profileImage avatar');
+        const users = await User.find({ id: { $in: userIds } }).select('id name email profileImage avatar');
         const userMap = {};
         users.forEach(u => userMap[u.id] = u);
 
         leaves = leaves.map(leave => ({
             ...leave,
+            // The list shows who asked, so it carries their contact too
+            userName: leave.userName || userMap[leave.userId]?.name,
+            email: userMap[leave.userId]?.email,
             profileImage: userMap[leave.userId]?.profileImage,
             avatar: userMap[leave.userId]?.avatar
         }));

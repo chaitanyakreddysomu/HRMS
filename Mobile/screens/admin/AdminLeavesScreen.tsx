@@ -17,7 +17,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/AppNavigator";
 import { getAuthSession } from "../../utils/authStorage";
+import {
+  toShellOptions,
+  useShellFilters,
+  useShellScroll,
+  useShellSearch,
+} from "../../components/ScreenActions";
 import { apiFetch, resetBaseUrl } from "../../utils/api";
+import ModalDismiss from "../../components/ModalDismiss";
 
 type Props = NativeStackScreenProps<RootStackParamList, "AdminLeaves">;
 
@@ -41,7 +48,7 @@ interface LeaveRequest {
 const TYPE_OPTIONS = ["All", "Casual", "Sick", "Annual", "WFH"];
 const STATUS_OPTIONS = ["All", "Pending", "Approved", "Rejected"];
 
-export default function AdminLeavesScreen({ navigation }: Props) {
+export default function AdminLeavesScreen({ navigation, embedded }: Props & { embedded?: boolean }) {
   const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -49,6 +56,11 @@ export default function AdminLeavesScreen({ navigation }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   const [searchTerm, setSearchTerm] = useState("");
+
+  /** the shell header search field drives this page */
+  useShellSearch(setSearchTerm);
+  const shellScroll = useShellScroll();
+
   const [statusFilter, setStatusFilter] = useState("All");
   const [typeFilter, setTypeFilter] = useState("All");
 
@@ -422,101 +434,129 @@ export default function AdminLeavesScreen({ navigation }: Props) {
 
   const activeLeaveId = selectedLeave?._id || selectedLeave?.id || "";
 
+  /** the header menu owns these filters while embedded */
+  useShellFilters([
+    {
+      key: "type",
+      label: "Types",
+      value: typeFilter,
+      defaultValue: "All",
+      options: toShellOptions(TYPE_OPTIONS),
+      onChange: setTypeFilter,
+    },
+    {
+      key: "status",
+      label: "Status",
+      value: statusFilter,
+      defaultValue: "All",
+      options: toShellOptions(STATUS_OPTIONS),
+      onChange: setStatusFilter,
+    },
+  ]);
+
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#F9FAFB" }}>
+    <SafeAreaView edges={embedded ? [] : undefined} style={{ flex: 1, backgroundColor: "#F9FAFB" }}>
       <StatusBar style="dark" />
 
       {/* HEADER */}
-      <View
-        style={{
-          paddingHorizontal: 24,
-          paddingVertical: 16,
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-between",
-          backgroundColor: "#FFFFFF",
-          borderBottomWidth: 1,
-          borderBottomColor: "#F3F4F6",
-        }}
-      >
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 16,
-            backgroundColor: "#F9FAFB",
-            borderWidth: 1,
-            borderColor: "#E5E7EB",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Ionicons name="arrow-back" size={22} color="#374151" />
-        </TouchableOpacity>
-        <Text style={{ color: "#111827", fontSize: 20, fontWeight: "700" }}>Leaves</Text>
-        <TouchableOpacity
-          onPress={onRefresh}
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 16,
-            backgroundColor: "#EFF6FF",
-            borderWidth: 1,
-            borderColor: "#DBEAFE",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Ionicons name="refresh-outline" size={20} color="#2563EB" />
-        </TouchableOpacity>
-      </View>
-
-      {/* SEARCH + FILTERS */}
-      <View
-        style={{
-          paddingHorizontal: 24,
-          paddingTop: 16,
-          paddingBottom: 16,
-          backgroundColor: "#FFFFFF",
-          borderBottomWidth: 1,
-          borderBottomColor: "#F3F4F6",
-          zIndex: 10,
-        }}
-      >
+      {!embedded && (
         <View
           style={{
+            paddingHorizontal: 24,
+            paddingVertical: 16,
             flexDirection: "row",
             alignItems: "center",
-            backgroundColor: "#F9FAFB",
-            borderWidth: 1,
-            borderColor: "#E5E7EB",
-            borderRadius: 12,
-            paddingHorizontal: 12,
-            height: 46,
-            marginBottom: 12,
+            justifyContent: "space-between",
+            backgroundColor: "#FFFFFF",
+            borderBottomWidth: 1,
+            borderBottomColor: "#F3F4F6",
           }}
         >
-          <Ionicons name="search" size={18} color="#9CA3AF" style={{ marginRight: 8 }} />
-          <TextInput
-            placeholder="Search employees, type or reason..."
-            placeholderTextColor="#9CA3AF"
-            value={searchTerm}
-            onChangeText={setSearchTerm}
-            style={{ flex: 1, color: "#111827", fontSize: 14, fontWeight: "500", height: "100%" }}
-          />
-          {searchTerm.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchTerm("")}>
-              <Ionicons name="close-circle" size={18} color="#9CA3AF" />
-            </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 16,
+              backgroundColor: "#F9FAFB",
+              borderWidth: 1,
+              borderColor: "#E5E7EB",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Ionicons name="arrow-back" size={22} color="#374151" />
+          </TouchableOpacity>
+          <Text style={{ color: "#111827", fontSize: 20, fontWeight: "700" }}>Leaves</Text>
+          <TouchableOpacity
+            onPress={onRefresh}
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 16,
+              backgroundColor: "#EFF6FF",
+              borderWidth: 1,
+              borderColor: "#DBEAFE",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Ionicons name="refresh-outline" size={20} color="#2563EB" />
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* SEARCH + FILTERS */}
+      {!embedded && (
+        <View
+          style={{
+            paddingHorizontal: 24,
+            paddingTop: 16,
+            paddingBottom: 16,
+            backgroundColor: "#FFFFFF",
+            borderBottomWidth: 1,
+            borderBottomColor: "#F3F4F6",
+            zIndex: 10,
+          }}
+        >
+          {!embedded && (
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                backgroundColor: "#F9FAFB",
+                borderWidth: 1,
+                borderColor: "#E5E7EB",
+                borderRadius: 12,
+                paddingHorizontal: 12,
+                height: 46,
+                marginBottom: 12,
+              }}
+            >
+              <Ionicons name="search" size={18} color="#9CA3AF" style={{ marginRight: 8 }} />
+              <TextInput
+                placeholder="Search employees, type or reason..."
+                placeholderTextColor="#9CA3AF"
+                value={searchTerm}
+                onChangeText={setSearchTerm}
+                style={{ flex: 1, color: "#111827", fontSize: 14, fontWeight: "500", height: "100%" }}
+              />
+              {searchTerm.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchTerm("")}>
+                  <Ionicons name="close-circle" size={18} color="#9CA3AF" />
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+
+          {!embedded && (
+            <View style={{ flexDirection: "row", gap: 12 }}>
+              {renderDropdown("type", "Types", typeFilter, TYPE_OPTIONS, setTypeFilter)}
+              {renderDropdown("status", "Status", statusFilter, STATUS_OPTIONS, setStatusFilter)}
+            </View>
           )}
         </View>
-
-        <View style={{ flexDirection: "row", gap: 12 }}>
-          {renderDropdown("type", "Types", typeFilter, TYPE_OPTIONS, setTypeFilter)}
-          {renderDropdown("status", "Status", statusFilter, STATUS_OPTIONS, setStatusFilter)}
-        </View>
-      </View>
+      )}
 
       {/* LIST */}
       <View style={{ flex: 1 }}>
@@ -536,11 +576,11 @@ export default function AdminLeavesScreen({ navigation }: Props) {
             </TouchableOpacity>
           </View>
         ) : (
-          <FlatList
+          <FlatList {...shellScroll}
             data={leaves}
             keyExtractor={(item, index) => item._id || item.id || `leave-${index}`}
             renderItem={renderLeave}
-            contentContainerStyle={{ padding: 24, paddingBottom: 100 }}
+            contentContainerStyle={{ padding: 24, paddingBottom: 150 }}
             refreshControl={
               <RefreshControl
                 refreshing={refreshing}
@@ -580,6 +620,7 @@ export default function AdminLeavesScreen({ navigation }: Props) {
         onRequestClose={() => setSelectedLeave(null)}
       >
         <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}>
+          <ModalDismiss onPress={() => setSelectedLeave(null)} />
           <View
             style={{
               backgroundColor: "#FFFFFF",
@@ -929,6 +970,10 @@ export default function AdminLeavesScreen({ navigation }: Props) {
         }}
       >
         <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}>
+          <ModalDismiss onPress={() => {
+          setRejectingId(null);
+          setRejectionReason("");
+        }} />
           <View
             style={{
               backgroundColor: "#FFFFFF",

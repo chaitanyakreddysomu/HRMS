@@ -15,6 +15,7 @@ import {
   Image,
   RefreshControl,
   FlatList,
+  ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
@@ -22,7 +23,15 @@ import { Ionicons } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/AppNavigator";
 import { getAuthSession } from "../../utils/authStorage";
+import {
+  toShellOptions,
+  useShellFilters,
+  useShellScroll,
+  useShellSearch,
+} from "../../components/ScreenActions";
 import { apiFetch, resetBaseUrl } from "../../utils/api";
+import { useToast } from "../../components/Toast";
+import ModalDismiss from "../../components/ModalDismiss";
 
 type Props = NativeStackScreenProps<
   RootStackParamList,
@@ -68,6 +77,25 @@ const ROLE_OPTIONS = [
   "ADMIN",
 ];
 
+const DEPARTMENT_OPTIONS = [
+  "Engineering",
+  "Human Resources",
+  "Sales",
+  "Marketing",
+  "IT",
+];
+
+const BLOOD_GROUP_OPTIONS = [
+  "A+",
+  "A-",
+  "B+",
+  "B-",
+  "AB+",
+  "AB-",
+  "O+",
+  "O-",
+];
+
 const PROJECT_OPTIONS = [
   "All",
   "In Project",
@@ -76,8 +104,7 @@ const PROJECT_OPTIONS = [
 ];
 
 export default function AdminEmployeesScreen({
-  navigation,
-}: Props) {
+  navigation, embedded }: Props & { embedded?: boolean }) {
   const [employees, setEmployees] = useState<Employee[]>([]);
 
   const [loading, setLoading] = useState(true);
@@ -87,6 +114,10 @@ export default function AdminEmployeesScreen({
   const [error, setError] = useState<string | null>(null);
 
   const [searchTerm, setSearchTerm] = useState("");
+
+  /** the shell header search field drives this page */
+  useShellSearch(setSearchTerm);
+  const shellScroll = useShellScroll();
 
   const [statusFilter, setStatusFilter] =
     useState("Active");
@@ -105,6 +136,171 @@ export default function AdminEmployeesScreen({
 
   const [openDropdown, setOpenDropdown] =
     useState<"status" | "role" | "project" | null>(null);
+
+  // ============================================================
+  // EDIT EMPLOYEE
+  // ============================================================
+  //
+  // Mirrors the web console: the row opens a working copy, every
+  // field edits that copy, and Save Changes sends the whole thing
+  // to PUT /api/admin/employees/:id. Password is separate because
+  // the backend only touches it when it is not blank.
+
+  const { showToast } = useToast();
+
+  const [editEmployee, setEditEmployee] =
+    useState<Employee | null>(null);
+
+  const [newPassword, setNewPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [savingEmployee, setSavingEmployee] = useState(false);
+
+  /** dates travel as YYYY-MM-DD, the shape the API stores */
+  const toDateInput = (value?: string | Date) => {
+    if (!value) return "";
+
+    const text = String(value);
+    return text.includes("T") ? text.split("T")[0] : text;
+  };
+
+  const openEditEmployee = (employee: Employee) => {
+    setEditEmployee({ ...employee });
+    setNewPassword("");
+    setShowNewPassword(false);
+    setSelectedEmployee(null);
+  };
+
+  const closeEditEmployee = () => {
+    if (savingEmployee) return;
+
+    setEditEmployee(null);
+    setNewPassword("");
+  };
+
+  /** one setter for every plain field on the working copy */
+  const setEditField = <K extends keyof Employee>(
+    field: K,
+    value: Employee[K]
+  ) =>
+    setEditEmployee((current) =>
+      current ? { ...current, [field]: value } : current
+    );
+
+  const setEmergencyField = (
+    field: "name" | "phone",
+    value: string
+  ) =>
+    setEditEmployee((current) =>
+      current
+        ? {
+            ...current,
+            emergencyContact: {
+              name: "",
+              phone: "",
+              ...current.emergencyContact,
+              [field]: value,
+            },
+          }
+        : current
+    );
+
+  const handleUpdateEmployee = async () => {
+    if (!editEmployee || savingEmployee) return;
+
+    if (!editEmployee.name.trim()) {
+      showToast({
+        type: "error",
+        title: "Name Required",
+        message: "Enter the employee full name.",
+      });
+
+      return;
+    }
+
+    if (!editEmployee.email.trim()) {
+      showToast({
+        type: "error",
+        title: "Email Required",
+        message: "Enter the employee email address.",
+      });
+
+      return;
+    }
+
+    setSavingEmployee(true);
+
+    try {
+      const session = await getAuthSession();
+
+      if (!session?.token) {
+        showToast({
+          type: "error",
+          title: "Session Expired",
+          message: "Please log in again to edit employees.",
+        });
+
+        return;
+      }
+
+      const payload: Record<string, any> = {
+        ...editEmployee,
+        dob: toDateInput(editEmployee.dob),
+        joiningDate: toDateInput(editEmployee.joiningDate),
+      };
+
+      /** an untouched password field must not reach the server */
+      if (newPassword.trim()) payload.password = newPassword.trim();
+      else delete payload.password;
+
+      const res = await apiFetch(
+        `/api/admin/employees/${editEmployee.id}`,
+        session.token,
+        {
+          method: "PUT",
+          body: JSON.stringify(payload),
+        }
+      );
+
+      const data = await res.json().catch(() => ({} as any));
+
+      if (!res.ok) {
+        showToast({
+          type: "error",
+          title: "Update Failed",
+          message: data?.message || "Unable to save these changes.",
+        });
+
+        return;
+      }
+
+      const saved: Employee = data?.user || editEmployee;
+
+      setEmployees((current) =>
+        current.map((employee) =>
+          employee.id === saved.id ? { ...employee, ...saved } : employee
+        )
+      );
+
+      setEditEmployee(null);
+      setNewPassword("");
+
+      showToast({
+        type: "success",
+        title: "Employee Updated",
+        message: `${saved.name} has been saved.`,
+      });
+    } catch (error) {
+      console.error("Update employee error:", error);
+
+      showToast({
+        type: "error",
+        title: "Something Went Wrong",
+        message: "Could not reach the server. Please try again.",
+      });
+    } finally {
+      setSavingEmployee(false);
+    }
+  };
 
   const debounceRef =
     useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -710,8 +906,36 @@ export default function AdminEmployeesScreen({
   // RENDER
   // ============================================================
 
+  /** the header menu owns these filters while embedded */
+  useShellFilters([
+    {
+      key: "status",
+      label: "Status",
+      value: statusFilter,
+      defaultValue: "Active",
+      options: toShellOptions(STATUS_OPTIONS),
+      onChange: setStatusFilter,
+    },
+    {
+      key: "role",
+      label: "Role",
+      value: roleFilter,
+      defaultValue: "All",
+      options: toShellOptions(ROLE_OPTIONS),
+      onChange: setRoleFilter,
+    },
+    {
+      key: "project",
+      label: "Project",
+      value: projectFilter,
+      defaultValue: "All",
+      options: toShellOptions(PROJECT_OPTIONS),
+      onChange: setProjectFilter,
+    },
+  ]);
+
   return (
-    <SafeAreaView
+    <SafeAreaView edges={embedded ? [] : undefined}
       style={{
         flex: 1,
         backgroundColor: "#F9FAFB",
@@ -723,179 +947,187 @@ export default function AdminEmployeesScreen({
           HEADER
       ====================================================== */}
 
-      <View
-        style={{
-          paddingHorizontal: 24,
-          paddingVertical: 16,
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-between",
-          backgroundColor: "#FFFFFF",
-          borderBottomWidth: 1,
-          borderBottomColor:
-            "#F3F4F6",
-        }}
-      >
-        <TouchableOpacity
-          onPress={() =>
-            navigation.goBack()
-          }
+      {!embedded && (
+        <View
           style={{
-            width: 44,
-            height: 44,
-            borderRadius: 16,
-            backgroundColor:
-              "#F9FAFB",
-            borderWidth: 1,
-            borderColor:
-              "#E5E7EB",
+            paddingHorizontal: 24,
+            paddingVertical: 16,
+            flexDirection: "row",
             alignItems: "center",
-            justifyContent: "center",
+            justifyContent: "space-between",
+            backgroundColor: "#FFFFFF",
+            borderBottomWidth: 1,
+            borderBottomColor:
+              "#F3F4F6",
           }}
         >
-          <Ionicons
-            name="arrow-back"
-            size={22}
-            color="#374151"
-          />
-        </TouchableOpacity>
-
-        <Text
-          style={{
-            color: "#111827",
-            fontSize: 20,
-            fontWeight: "700",
-          }}
-        >
-          Employees
-        </Text>
-
-        <TouchableOpacity
-          onPress={onRefresh}
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 16,
-            backgroundColor:
-              "#EFF6FF",
-            borderWidth: 1,
-            borderColor:
-              "#DBEAFE",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Ionicons
-            name="refresh-outline"
-            size={20}
-            color="#2563EB"
-          />
-        </TouchableOpacity>
-      </View>
+          <TouchableOpacity
+            onPress={() =>
+              navigation.goBack()
+            }
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 16,
+              backgroundColor:
+                "#F9FAFB",
+              borderWidth: 1,
+              borderColor:
+                "#E5E7EB",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Ionicons
+              name="arrow-back"
+              size={22}
+              color="#374151"
+            />
+          </TouchableOpacity>
+  
+          <Text
+            style={{
+              color: "#111827",
+              fontSize: 20,
+              fontWeight: "700",
+            }}
+          >
+            Employees
+          </Text>
+  
+          <TouchableOpacity
+            onPress={onRefresh}
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 16,
+              backgroundColor:
+                "#EFF6FF",
+              borderWidth: 1,
+              borderColor:
+                "#DBEAFE",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Ionicons
+              name="refresh-outline"
+              size={20}
+              color="#2563EB"
+            />
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* ======================================================
           STICKY SEARCH + FILTER AREA
       ====================================================== */}
 
-      <View
-        style={{
-          backgroundColor: "#FFFFFF",
-          paddingHorizontal: 20,
-          paddingTop: 14,
-          paddingBottom: 14,
-          borderBottomWidth: 1,
-          borderBottomColor:
-            "#F3F4F6",
-          zIndex: 100,
-        }}
-      >
-        {/* SEARCH */}
-
+      {!embedded && (
         <View
           style={{
-            flexDirection: "row",
-            alignItems: "center",
-            backgroundColor:
-              "#F9FAFB",
-            borderRadius: 16,
-            paddingHorizontal: 16,
-            paddingVertical: 12,
-            borderWidth: 1,
-            borderColor:
-              "#E5E7EB",
-            marginBottom: 10,
+            backgroundColor: "#FFFFFF",
+            paddingHorizontal: 20,
+            paddingTop: 14,
+            paddingBottom: 14,
+            borderBottomWidth: 1,
+            borderBottomColor:
+              "#F3F4F6",
+            zIndex: 100,
           }}
         >
-          <Ionicons
-            name="search-outline"
-            size={20}
-            color="#9CA3AF"
-          />
+          {/* SEARCH */}
 
-          <TextInput
-            style={{
-              flex: 1,
-              color: "#111827",
-              fontSize: 14,
-              marginLeft: 10,
-              padding: 0,
-            }}
-            placeholder="Search employees..."
-            placeholderTextColor="#9CA3AF"
-            value={searchTerm}
-            onChangeText={
-              setSearchTerm
-            }
-          />
-
-          {searchTerm.length > 0 && (
-            <TouchableOpacity
-              onPress={() =>
-                setSearchTerm("")
-              }
+          {!embedded && (
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                backgroundColor:
+                  "#F9FAFB",
+                borderRadius: 16,
+                paddingHorizontal: 16,
+                paddingVertical: 12,
+                borderWidth: 1,
+                borderColor:
+                  "#E5E7EB",
+                marginBottom: 10,
+              }}
             >
               <Ionicons
-                name="close-circle"
-                size={18}
+                name="search-outline"
+                size={20}
                 color="#9CA3AF"
               />
-            </TouchableOpacity>
+
+              <TextInput
+                style={{
+                  flex: 1,
+                  color: "#111827",
+                  fontSize: 14,
+                  marginLeft: 10,
+                  padding: 0,
+                }}
+                placeholder="Search employees..."
+                placeholderTextColor="#9CA3AF"
+                value={searchTerm}
+                onChangeText={
+                  setSearchTerm
+                }
+              />
+
+              {searchTerm.length > 0 && (
+                <TouchableOpacity
+                  onPress={() =>
+                    setSearchTerm("")
+                  }
+                >
+                  <Ionicons
+                    name="close-circle"
+                    size={18}
+                    color="#9CA3AF"
+                  />
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+
+          {/* DROPDOWNS */}
+
+          {!embedded && (
+            <View
+              style={{
+                flexDirection: "row",
+                gap: 8,
+              }}
+            >
+              {renderDropdown(
+                "status",
+                "Status",
+                statusFilter,
+                STATUS_OPTIONS,
+                setStatusFilter
+              )}
+
+              {renderDropdown(
+                "role",
+                "Role",
+                roleFilter,
+                ROLE_OPTIONS,
+                setRoleFilter
+              )}
+
+              {renderDropdown(
+                "project",
+                "Project",
+                projectFilter,
+                PROJECT_OPTIONS,
+                setProjectFilter
+              )}
+            </View>
           )}
         </View>
-
-        {/* DROPDOWNS */}
-
-        <View
-          style={{
-            flexDirection: "row",
-            gap: 8,
-          }}
-        >
-          {renderDropdown(
-            "status",
-            "Status",
-            statusFilter,
-            STATUS_OPTIONS,
-            setStatusFilter
-          )}
-
-          {renderDropdown(
-            "role",
-            "Role",
-            roleFilter,
-            ROLE_OPTIONS,
-            setRoleFilter
-          )}
-
-          {renderDropdown(
-            "project",
-            "Project",
-            projectFilter,
-            PROJECT_OPTIONS,
-            setProjectFilter
-          )}
-        </View>
-      </View>
+      )}
 
       {/* ======================================================
           EMPLOYEE LIST
@@ -981,7 +1213,7 @@ export default function AdminEmployeesScreen({
           </View>
         </View>
       ) : (
-        <FlatList
+        <FlatList {...shellScroll}
           data={employees}
           keyExtractor={(item) =>
             item._id || item.id
@@ -992,7 +1224,7 @@ export default function AdminEmployeesScreen({
           contentContainerStyle={{
             paddingHorizontal: 20,
             paddingTop: 16,
-            paddingBottom: 40,
+            paddingBottom: 150,
             flexGrow:
               employees.length === 0
                 ? 1
@@ -1222,31 +1454,71 @@ export default function AdminEmployeesScreen({
                 Employee Details
               </Text>
 
-              <TouchableOpacity
-                onPress={() =>
-                  setSelectedEmployee(
-                    null
-                  )
-                }
+              <View
                 style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius:
-                    18,
-                  backgroundColor:
-                    "#F3F4F6",
-                  alignItems:
-                    "center",
-                  justifyContent:
-                    "center",
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 8,
                 }}
               >
-                <Ionicons
-                  name="close"
-                  size={20}
-                  color="#6B7280"
-                />
-              </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() =>
+                    selectedEmployee &&
+                    openEditEmployee(selectedEmployee)
+                  }
+                  style={{
+                    height: 36,
+                    paddingHorizontal: 14,
+                    borderRadius: 18,
+                    backgroundColor: "#2563EB",
+                    flexDirection: "row",
+                    alignItems: "center",
+                  }}
+                >
+                  <Ionicons
+                    name="create-outline"
+                    size={16}
+                    color="#FFFFFF"
+                  />
+
+                  <Text
+                    style={{
+                      color: "#FFFFFF",
+                      fontSize: 13,
+                      fontWeight: "700",
+                      marginLeft: 6,
+                    }}
+                  >
+                    Edit
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() =>
+                    setSelectedEmployee(
+                      null
+                    )
+                  }
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius:
+                      18,
+                    backgroundColor:
+                      "#F3F4F6",
+                    alignItems:
+                      "center",
+                    justifyContent:
+                      "center",
+                  }}
+                >
+                  <Ionicons
+                    name="close"
+                    size={20}
+                    color="#6B7280"
+                  />
+                </TouchableOpacity>
+              </View>
             </View>
 
             {selectedEmployee && (
@@ -1961,6 +2233,515 @@ export default function AdminEmployeesScreen({
           </View>
         </View>
       </Modal>
+
+      {/* ============================================================
+          EDIT EMPLOYEE
+      ============================================================ */}
+
+      <Modal
+        visible={!!editEmployee}
+        animationType="slide"
+        transparent
+        onRequestClose={closeEditEmployee}
+      >
+        <View
+          style={{
+            flex: 1,
+            justifyContent: "flex-end",
+            backgroundColor: "rgba(0,0,0,0.5)",
+          }}
+        >
+          <Pressable style={{ flex: 1 }} onPress={closeEditEmployee} />
+
+          <View
+            style={{
+              maxHeight: "88%",
+              backgroundColor: "#FFFFFF",
+              borderTopLeftRadius: 32,
+              borderTopRightRadius: 32,
+              paddingHorizontal: 20,
+              paddingTop: 12,
+              paddingBottom: 28,
+            }}
+          >
+            <View style={{ alignItems: "center", marginBottom: 14 }}>
+              <View
+                style={{
+                  width: 44,
+                  height: 5,
+                  borderRadius: 3,
+                  backgroundColor: "#D1D5DB",
+                }}
+              />
+            </View>
+
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: 18,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 20,
+                  fontWeight: "700",
+                  color: "#111827",
+                }}
+              >
+                Edit Employee
+              </Text>
+
+              <TouchableOpacity
+                onPress={closeEditEmployee}
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 18,
+                  backgroundColor: "#F3F4F6",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Ionicons name="close" size={20} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+
+            {editEmployee && (
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+              >
+                <EditSection icon="business-outline" title="Company Details" />
+
+                <EditField
+                  label="Employee ID"
+                  value={editEmployee.id}
+                  editable={false}
+                  onChangeText={() => {}}
+                />
+
+                <EditField
+                  label="Full Name"
+                  value={editEmployee.name}
+                  onChangeText={(value) => setEditField("name", value)}
+                />
+
+                <EditField
+                  label="Email"
+                  value={editEmployee.email}
+                  keyboardType="email-address"
+                  onChangeText={(value) => setEditField("email", value)}
+                />
+
+                <EditChoice
+                  label="Department"
+                  value={editEmployee.department || ""}
+                  options={DEPARTMENT_OPTIONS}
+                  onSelect={(value) => setEditField("department", value)}
+                />
+
+                <EditField
+                  label="Designation"
+                  value={editEmployee.designation || ""}
+                  onChangeText={(value) => setEditField("designation", value)}
+                />
+
+                <EditField
+                  label="Joining Date"
+                  value={toDateInput(editEmployee.joiningDate)}
+                  placeholder="YYYY-MM-DD"
+                  onChangeText={(value) => setEditField("joiningDate", value)}
+                />
+
+                <EditField
+                  label="Annual Package (Rs)"
+                  value={
+                    editEmployee.package === undefined ||
+                    editEmployee.package === null
+                      ? ""
+                      : String(editEmployee.package)
+                  }
+                  placeholder="e.g. 1200000"
+                  keyboardType="numeric"
+                  onChangeText={(value) => {
+                    const cleaned = value.replace(/[^0-9.]/g, "");
+
+                    setEditField(
+                      "package",
+                      cleaned ? Number(cleaned) : (undefined as any)
+                    );
+                  }}
+                />
+
+                <EditChoice
+                  label="Role"
+                  value={editEmployee.role}
+                  options={["EMPLOYEE", "HR", "ADMIN"]}
+                  onSelect={(value) => setEditField("role", value as any)}
+                />
+
+                <EditChoice
+                  label="Project Status"
+                  value={editEmployee.projectStatus || "Bench"}
+                  options={["In Project", "Bench", "Training"]}
+                  onSelect={(value) =>
+                    setEditField("projectStatus", value as any)
+                  }
+                />
+
+                <EditChoice
+                  label="Status"
+                  value={editEmployee.status}
+                  options={["Active", "Inactive"]}
+                  onSelect={(value) => setEditField("status", value as any)}
+                />
+
+                {/* RESET PASSWORD */}
+
+                <Text
+                  style={{
+                    color: "#374151",
+                    fontSize: 12,
+                    fontWeight: "700",
+                    marginTop: 16,
+                    marginBottom: 6,
+                  }}
+                >
+                  Reset Password
+                </Text>
+
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    height: 48,
+                    borderRadius: 14,
+                    borderWidth: 1,
+                    borderColor: "#E5E7EB",
+                    backgroundColor: "#F9FAFB",
+                    paddingHorizontal: 14,
+                  }}
+                >
+                  <TextInput
+                    value={newPassword}
+                    onChangeText={setNewPassword}
+                    placeholder="Leave blank to keep the current one"
+                    placeholderTextColor="#9CA3AF"
+                    secureTextEntry={!showNewPassword}
+                    autoCapitalize="none"
+                    style={{
+                      flex: 1,
+                      color: "#111827",
+                      fontSize: 14,
+                      fontWeight: "500",
+                    }}
+                  />
+
+                  <TouchableOpacity
+                    onPress={() => setShowNewPassword((v) => !v)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Ionicons
+                      name={showNewPassword ? "eye-off-outline" : "eye-outline"}
+                      size={19}
+                      color="#6B7280"
+                    />
+                  </TouchableOpacity>
+                </View>
+
+                <EditSection icon="call-outline" title="Contact Information" />
+
+                <EditField
+                  label="Phone Number"
+                  value={editEmployee.phone || ""}
+                  keyboardType="phone-pad"
+                  onChangeText={(value) => setEditField("phone", value)}
+                />
+
+                <EditField
+                  label="Address"
+                  value={editEmployee.address || ""}
+                  multiline
+                  onChangeText={(value) => setEditField("address", value)}
+                />
+
+                <EditField
+                  label="Date of Birth"
+                  value={toDateInput(editEmployee.dob)}
+                  placeholder="YYYY-MM-DD"
+                  onChangeText={(value) => setEditField("dob", value)}
+                />
+
+                <EditChoice
+                  label="Blood Group"
+                  value={editEmployee.bloodGroup || ""}
+                  options={BLOOD_GROUP_OPTIONS}
+                  onSelect={(value) => setEditField("bloodGroup", value)}
+                />
+
+                <EditSection
+                  icon="alert-circle-outline"
+                  title="Emergency Contact"
+                  danger
+                />
+
+                <EditField
+                  label="Name"
+                  value={editEmployee.emergencyContact?.name || ""}
+                  onChangeText={(value) => setEmergencyField("name", value)}
+                />
+
+                <EditField
+                  label="Phone"
+                  value={editEmployee.emergencyContact?.phone || ""}
+                  keyboardType="phone-pad"
+                  onChangeText={(value) => setEmergencyField("phone", value)}
+                />
+
+                <EditSection
+                  icon="document-text-outline"
+                  title="Statutory Details"
+                />
+
+                <EditField
+                  label="UAN Number"
+                  value={editEmployee.uan || ""}
+                  placeholder="Enter UAN Number"
+                  onChangeText={(value) => setEditField("uan", value)}
+                />
+
+                {/* ACTIONS */}
+
+                <View
+                  style={{
+                    flexDirection: "row",
+                    marginTop: 26,
+                    marginBottom: 10,
+                  }}
+                >
+                  <TouchableOpacity
+                    activeOpacity={0.85}
+                    onPress={closeEditEmployee}
+                    disabled={savingEmployee}
+                    style={{
+                      flex: 1,
+                      height: 50,
+                      borderRadius: 16,
+                      backgroundColor: "#F3F4F6",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      marginRight: 8,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: "#374151",
+                        fontSize: 14,
+                        fontWeight: "700",
+                      }}
+                    >
+                      Cancel
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    activeOpacity={0.85}
+                    onPress={handleUpdateEmployee}
+                    disabled={savingEmployee}
+                    style={{
+                      flex: 1,
+                      height: 50,
+                      borderRadius: 16,
+                      backgroundColor: savingEmployee ? "#93B4F7" : "#2563EB",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      marginLeft: 8,
+                    }}
+                  >
+                    {savingEmployee ? (
+                      <ActivityIndicator color="#FFFFFF" />
+                    ) : (
+                      <Text
+                        style={{
+                          color: "#FFFFFF",
+                          fontSize: 14,
+                          fontWeight: "700",
+                        }}
+                      >
+                        Save Changes
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
+  );
+}
+
+/**
+ * ============================================================
+ * EDIT FORM PIECES
+ * ============================================================
+ */
+function EditSection({
+  icon,
+  title,
+  danger,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  title: string;
+  danger?: boolean;
+}) {
+  return (
+    <View
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        marginTop: 22,
+        marginBottom: 4,
+      }}
+    >
+      <Ionicons name={icon} size={16} color={danger ? "#DC2626" : "#2563EB"} />
+
+      <Text
+        style={{
+          color: danger ? "#DC2626" : "#2563EB",
+          fontSize: 13,
+          fontWeight: "800",
+          marginLeft: 8,
+        }}
+      >
+        {title}
+      </Text>
+    </View>
+  );
+}
+
+function EditField({
+  label,
+  value,
+  onChangeText,
+  placeholder,
+  keyboardType = "default",
+  multiline,
+  editable = true,
+}: {
+  label: string;
+  value: string;
+  onChangeText: (value: string) => void;
+  placeholder?: string;
+  keyboardType?: "default" | "email-address" | "phone-pad" | "numeric";
+  multiline?: boolean;
+  editable?: boolean;
+}) {
+  return (
+    <View style={{ marginTop: 14 }}>
+      <Text
+        style={{
+          color: "#374151",
+          fontSize: 12,
+          fontWeight: "700",
+          marginBottom: 6,
+        }}
+      >
+        {label}
+      </Text>
+
+      <TextInput
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        placeholderTextColor="#9CA3AF"
+        keyboardType={keyboardType}
+        autoCapitalize={keyboardType === "email-address" ? "none" : "sentences"}
+        multiline={multiline}
+        editable={editable}
+        style={{
+          minHeight: 48,
+          borderRadius: 14,
+          borderWidth: 1,
+          borderColor: "#E5E7EB",
+          backgroundColor: editable ? "#F9FAFB" : "#F3F4F6",
+          paddingHorizontal: 14,
+          paddingTop: multiline ? 12 : 0,
+          paddingBottom: multiline ? 12 : 0,
+          color: editable ? "#111827" : "#6B7280",
+          fontSize: 14,
+          fontWeight: "500",
+          textAlignVertical: multiline ? "top" : "center",
+        }}
+      />
+    </View>
+  );
+}
+
+function EditChoice({
+  label,
+  value,
+  options,
+  onSelect,
+}: {
+  label: string;
+  value: string;
+  options: string[];
+  onSelect: (value: string) => void;
+}) {
+  return (
+    <View style={{ marginTop: 14 }}>
+      <Text
+        style={{
+          color: "#374151",
+          fontSize: 12,
+          fontWeight: "700",
+          marginBottom: 8,
+        }}
+      >
+        {label}
+      </Text>
+
+      <View
+        style={{
+          flexDirection: "row",
+          flexWrap: "wrap",
+          gap: 8,
+        }}
+      >
+        {options.map((option) => {
+          const active = option === value;
+
+          return (
+            <TouchableOpacity
+              key={option}
+              activeOpacity={0.8}
+              onPress={() => onSelect(option)}
+              style={{
+                paddingHorizontal: 14,
+                paddingVertical: 9,
+                borderRadius: 20,
+                borderWidth: 1,
+                borderColor: active ? "#2563EB" : "#E5E7EB",
+                backgroundColor: active ? "#2563EB" : "#F9FAFB",
+              }}
+            >
+              <Text
+                style={{
+                  color: active ? "#FFFFFF" : "#374151",
+                  fontSize: 12,
+                  fontWeight: active ? "800" : "600",
+                }}
+              >
+                {option}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
   );
 }
