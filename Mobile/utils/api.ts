@@ -1,62 +1,39 @@
 /**
  * Centralized API utility for the HRMS Mobile App.
- * Tries multiple backend endpoints so the app works on
- * physical devices (LAN IP), Android emulators (10.0.2.2),
- * and iOS simulators (localhost / 127.0.0.1).
+ *
+ * The backend is deployed, so there is one address and it is the
+ * same from every device: a phone on mobile data, a phone on any
+ * Wi-Fi, an emulator, a simulator. Nothing is probed and nothing
+ * depends on which network the laptop happens to be on.
  */
+
+/** The one place the backend address lives. */
+const DEPLOYED = "https://hrms-zeta-livid.vercel.app";
 
 /**
- * The one place the backend address lives. Change LOCAL_IP here
- * and every screen follows.
+ * Point this at a machine on the LAN to work against a backend
+ * running locally, e.g. "http://192.168.1.34:5000". Left empty the
+ * app uses the deployed one above.
  */
-export const LOCAL_IP = "192.168.1.34";
-export const API_PORT = 5000;
+const LOCAL_OVERRIDE = "";
 
-/** LAN base, used directly by screens that build their own URLs */
-export const API_BASE_URL = `http://${LOCAL_IP}:${API_PORT}`;
+/** What every request goes to, override included. */
+export const API_BASE_URL = LOCAL_OVERRIDE || DEPLOYED;
 
-const CANDIDATE_BASES = [
-  API_BASE_URL,
-  `http://10.0.2.2:${API_PORT}`, // Android emulator loopback
-  `http://127.0.0.1:${API_PORT}`,
-  `http://localhost:${API_PORT}`,
-];
-
-let _resolvedBase: string | null = null;
+const BASE = API_BASE_URL;
 
 /**
- * Probe each candidate base URL and cache the first responsive one.
- * Falls back to the LAN IP if all probes time-out (avoids hanging forever).
+ * Kept for the screens that name the host in an error message.
+ * There is no port and no IP any more, so this is the hostname.
  */
-async function resolveBaseUrl(): Promise<string> {
-  if (_resolvedBase) return _resolvedBase;
+export const LOCAL_IP = BASE.replace(/^https?:\/\//, "");
 
-  for (const base of CANDIDATE_BASES) {
-    try {
-      const controller = new AbortController();
-      const id = setTimeout(() => controller.abort(), 2500);
-      const res = await fetch(`${base}/api/health`, {
-        signal: controller.signal,
-      });
-      clearTimeout(id);
-      if (res.ok || res.status < 500) {
-        _resolvedBase = base;
-        return _resolvedBase;
-      }
-    } catch {
-      // try next
-    }
-  }
-
-  // Default fallback
-  _resolvedBase = CANDIDATE_BASES[0];
-  return _resolvedBase;
-}
-
-/** Reset cached base (useful after network changes) */
-export function resetBaseUrl() {
-  _resolvedBase = null;
-}
+/**
+ * The base never changes now, so there is nothing to resolve. The
+ * function stays because callers ask for it after a failed request,
+ * where it is simply a no-op.
+ */
+export function resetBaseUrl() {}
 
 /**
  * Authenticated fetch wrapper.
@@ -69,8 +46,7 @@ export async function apiFetch(
   token: string,
   init: RequestInit = {}
 ): Promise<Response> {
-  const base = await resolveBaseUrl();
-  const url = `${base}${path}`;
+  const url = `${BASE}${path}`;
 
   const headers: Record<string, string> = {
     Authorization: `Bearer ${token}`,

@@ -1,10 +1,14 @@
-import React, { useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef } from "react";
 import {
   Animated,
+  Dimensions,
   Easing,
+  GestureResponderEvent,
   Image,
   LayoutAnimation,
   LayoutAnimationConfig,
+  PanResponder,
+  PanResponderGestureState,
   StyleSheet,
   Text,
   TextInput,
@@ -65,6 +69,12 @@ const GAP = 8;
 
 /** how long the banner stays at full width */
 const BANNER_HOLD = 3000;
+
+const SCREEN_WIDTH = Dimensions.get("window").width;
+
+/** how far, or how fast, a push has to be to take the banner away */
+const SWIPE_DISTANCE = 60;
+const SWIPE_VELOCITY = 0.35;
 
 /**
  * The header's layout changes, run natively. Spring rather than
@@ -180,39 +190,235 @@ export default function PillHeader({
    * title and the two circles underneath never reflow.
    */
   const bannerAnim = useRef(new Animated.Value(0)).current;
+  /** the horizontal throw, on its own node so the drivers never mix */
+  const dragX = useRef(new Animated.Value(0)).current;
   const [shown, setShown] = React.useState<PillHeaderProps["banner"]>(null);
   const doneRef = useRef(onBannerDone);
   doneRef.current = onBannerDone;
 
+  /** guards the retract, so a swipe and the timer cannot both run it */
+  const closing = useRef(false);
+
+  const finish = useCallback(() => {
+    setShown(null);
+    dragX.setValue(0);
+    bannerAnim.setValue(0);
+    doneRef.current?.();
+  }, [bannerAnim, dragX]);
+
+  /** the timed retract, straight up the way it came */
+  const retract = useCallback(() => {
+    if (closing.current) return;
+    closing.current = true;
+
+    Animated.timing(bannerAnim, {
+      toValue: 0,
+      duration: 260,
+      easing: Easing.in(Easing.cubic),
+      useNativeDriver: true,
+    }).start(({ finished: done }) => {
+      if (done) finish();
+    });
+  }, [bannerAnim, finish]);
+
+  /** thrown off the side it was pushed toward */
+  const throwOut = useCallback(
+    (direction: 1 | -1, velocity: number) => {
+      if (closing.current) return;
+      closing.current = true;
+
+      Animated.timing(dragX, {
+        toValue: direction * SCREEN_WIDTH,
+        duration: Math.max(140, 260 - Math.abs(velocity) * 40),
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }).start(({ finished: done }) => {
+        if (done) finish();
+      });
+    },
+    [dragX, finish]
+  );
+
   useEffect(() => {
     if (!banner) return;
 
+    closing.current = false;
+    dragX.setValue(0);
     setShown(banner);
 
-    const sequence = Animated.sequence([
-      Animated.spring(bannerAnim, {
-        toValue: 1,
-        useNativeDriver: true,
-        friction: 8,
-        tension: 70,
-      }),
-      Animated.delay(BANNER_HOLD),
-      Animated.timing(bannerAnim, {
-        toValue: 0,
-        duration: 260,
-        easing: Easing.in(Easing.cubic),
-        useNativeDriver: true,
-      }),
-    ]);
-
-    sequence.start(({ finished }) => {
-      if (!finished) return;
-      setShown(null);
-      doneRef.current?.();
+    const entrance = Animated.spring(bannerAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      friction: 8,
+      tension: 70,
     });
 
-    return () => sequence.stop();
+    entrance.start();
+
+    /**
+     * A plain timer rather than Animated.delay inside a sequence.
+     * Animated.delay does not take a driver, so putting it between
+     * two native-driven steps left the sequence stalled after the
+     * entrance and the banner never retracted.
+     */
+    const timer = setTimeout(retract, BANNER_HOLD);
+
+    return () => {
+      entrance.stop();
+      clearTimeout(timer);
+    };
   }, [banner?.id]);
+
+  /**
+   * ============================================================
+   * SWIPE TO DISMISS
+   * ============================================================
+   *
+   * A push either way takes the banner off that side. Anything
+   * short of the threshold springs back and the timer, which was
+   * never cancelled, still closes it.
+   */
+  const pan = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_evt: GestureResponderEvent, gesture: PanResponderGestureState) =>
+        Math.abs(gesture.dx) > 8 && Math.abs(gesture.dx) > Math.abs(gesture.dy),
+
+      onPanResponderMove: (_evt: GestureResponderEvent, gesture: PanResponderGestureState) => {
+        if (closing.current) return;
+        dragX.setValue(gesture.dx);
+      },
+
+      onPanResponderRelease: (_evt: GestureResponderEvent, gesture: PanResponderGestureState) => {
+        if (closing.current) return;
+
+        const far = Math.abs(gesture.dx) > SWIPE_DISTANCE;
+        const fast = Math.abs(gesture.vx) > SWIPE_VELOCITY;
+
+        if (far || fast) {
+          throwOut(gesture.dx >= 0 ? 1 : -1, gesture.vx);
+          return;
+        }
+
+        Animated.spring(dragX, {
+          toValue: 0,
+          useNativeDriver: true,
+          friction: 7,
+          tension: 90,
+        }).start();
+      },
+    })
+  ).current;
+
+  /**
+   * ============================================================
+   * BELL WIGGLE
+   * ============================================================
+   *
+   * The action circle shakes when the unread count goes up, so a
+   * notification that arrived while the header was busy still
+   * announces itself once the banner is out of the way.
+   */
+  const wiggle = useRef(new Animated.Value(0)).current;
+  const lastBadge = useRef(actionBadge);
+
+  useEffect(() => {
+    const grew = actionBadge > lastBadge.current;
+    lastBadge.current = actionBadge;
+
+    if (!grew || !actionIcon) return;
+
+    /** waits out the banner, which has the circles faded away */
+    const timer = setTimeout(() => {
+      wiggle.setValue(0);
+
+      Animated.sequence([
+        Animated.timing(wiggle, {
+          toValue: 1,
+          duration: 90,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(wiggle, {
+          toValue: -1,
+          duration: 130,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(wiggle, {
+          toValue: 0.6,
+          duration: 110,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.spring(wiggle, {
+          toValue: 0,
+          useNativeDriver: true,
+          friction: 4,
+          tension: 140,
+        }),
+      ]).start();
+    }, banner ? BANNER_HOLD + 320 : 0);
+
+    return () => clearTimeout(timer);
+  }, [actionBadge, actionIcon]);
+
+  const wiggleRotate = wiggle.interpolate({
+    inputRange: [-1, 1],
+    outputRange: ["-14deg", "14deg"],
+  });
+
+  /** the bell on the banner itself, shaken as the banner settles */
+  const bannerBell = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!banner) return;
+
+    bannerBell.setValue(0);
+
+    /** lets the pill arrive first, so the two do not compete */
+    const timer = setTimeout(() => {
+      Animated.sequence([
+        Animated.timing(bannerBell, {
+          toValue: 1,
+          duration: 90,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(bannerBell, {
+          toValue: -1,
+          duration: 130,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(bannerBell, {
+          toValue: 0.6,
+          duration: 110,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.spring(bannerBell, {
+          toValue: 0,
+          useNativeDriver: true,
+          friction: 4,
+          tension: 140,
+        }),
+      ]).start();
+    }, 220);
+
+    return () => clearTimeout(timer);
+  }, [banner?.id, bannerBell]);
+
+  const bannerBellRotate = bannerBell.interpolate({
+    inputRange: [-1, 1],
+    outputRange: ["-16deg", "16deg"],
+  });
+
+  /** it thins out as it leaves rather than vanishing at the edge */
+  const dragFade = dragX.interpolate({
+    inputRange: [-SCREEN_WIDTH / 2, 0, SCREEN_WIDTH / 2],
+    outputRange: [0, 1, 0],
+    extrapolate: "clamp",
+  });
 
   /**
    * Everything here is transform and opacity, so the whole thing
@@ -372,11 +578,15 @@ export default function PillHeader({
                 onPress={onMenuPress}
                 style={styles.fill}
               >
-                <Ionicons
-                  name={actionIcon || "ellipsis-vertical"}
-                  size={actionIcon ? 22 : 20}
-                  color={menuOpen ? "#2563EB" : "#1F2937"}
-                />
+                <Animated.View
+                  style={{ transform: [{ rotate: wiggleRotate }] }}
+                >
+                  <Ionicons
+                    name={actionIcon || "ellipsis-vertical"}
+                    size={actionIcon ? 22 : 20}
+                    color={menuOpen ? "#2563EB" : "#1F2937"}
+                  />
+                </Animated.View>
               </TouchableOpacity>
             </GlassSurface>
 
@@ -396,19 +606,30 @@ export default function PillHeader({
         <Animated.View
           style={[
             styles.banner,
-            {
-              opacity: bannerOpacity,
-              transform: [{ translateY: bannerLift }, { scale: bannerScale }],
-            },
+            { opacity: dragFade, transform: [{ translateX: dragX }] },
           ]}
+          {...pan.panHandlers}
         >
+          <Animated.View
+            style={[
+              styles.bannerSurface,
+              {
+                opacity: bannerOpacity,
+                transform: [{ translateY: bannerLift }, { scale: bannerScale }],
+              },
+            ]}
+          >
           <TouchableOpacity
             activeOpacity={onBannerPress ? 0.75 : 1}
             onPress={onBannerPress}
             style={styles.bannerRow}
           >
             <View style={styles.bannerIcon}>
-              <Ionicons name="notifications" size={17} color="#FFFFFF" />
+              <Animated.View
+                style={{ transform: [{ rotate: bannerBellRotate }] }}
+              >
+                <Ionicons name="notifications" size={17} color="#FFFFFF" />
+              </Animated.View>
             </View>
 
             <View style={styles.bannerText}>
@@ -422,6 +643,7 @@ export default function PillHeader({
               )}
             </View>
           </TouchableOpacity>
+          </Animated.View>
         </Animated.View>
       )}
     </View>
@@ -452,11 +674,15 @@ const styles = StyleSheet.create({
    * to composite while it moves, and this one is animating for its
    * whole life, so it is painted flat instead.
    */
+  /** the drag node: position only, so its transform stays its own */
   banner: {
     position: "absolute",
     left: 12,
     right: 12,
     height: CIRCLE,
+  },
+  bannerSurface: {
+    flex: 1,
     borderRadius: CIRCLE / 2,
     backgroundColor: "rgba(255,255,255,0.97)",
     borderWidth: StyleSheet.hairlineWidth * 2,

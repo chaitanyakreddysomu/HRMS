@@ -9,7 +9,8 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { apiFetch } from "../../utils/api";
-import { getAuthSession } from "../../utils/authStorage";
+import { getAuthSession, isAuthError } from "../../utils/authStorage";
+import RefreshSessionButton from "../../components/RefreshSessionButton";
 import {
   toShellOptions,
   useShellFilters,
@@ -145,7 +146,12 @@ export default function AdminNotificationsScreen({
         session.token
       );
       if (!res.ok) {
-        setError("Could not load notifications.");
+        /** a rejected token is worth naming, so the refresh is offered */
+        setError(
+          res.status === 401 || res.status === 403
+            ? "Session expired. Refresh it to carry on."
+            : "Could not load notifications."
+        );
         return;
       }
 
@@ -490,6 +496,15 @@ export default function AdminNotificationsScreen({
           >
             {error || "Nothing here yet"}
           </Text>
+
+          {isAuthError(error) && (
+            <RefreshSessionButton
+              onDone={() => {
+                setLoading(true);
+                load();
+              }}
+            />
+          )}
         </View>
       }
     />

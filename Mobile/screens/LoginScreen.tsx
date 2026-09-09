@@ -37,17 +37,10 @@ type Props = NativeStackScreenProps<RootStackParamList, "Login">;
  * BACKEND CONFIGURATION
  * ============================================================
  *
- * Physical Android/iPhone:
- *   Use your computer's LAN IP:
- *   http://<LOCAL_IP>:5000, set in utils/api.ts
- *
- * Android Emulator:
- *   http://10.0.2.2:5000
- *
- * iOS Simulator:
- *   http://127.0.0.1:5000
- *
- * Make sure your backend listens on 0.0.0.0, not only localhost.
+ * The backend is deployed, so the address is the same from every
+ * device and no network setup is involved. It lives in
+ * utils/api.ts, which also carries the override for working
+ * against a local server.
  */
 
 const LOGIN_ENDPOINT = `${API_BASE_URL}/api/auth/login`;
@@ -435,13 +428,9 @@ export default function LoginScreen({ navigation }: Props) {
         err?.message?.includes("Network request failed") ||
         err?.message?.includes("Failed to fetch")
       ) {
-        /** the full checklist stays in the log, the toast stays short */
-        console.log(
-          `Backend unreachable. Check it runs on port 5000 at ${LOCAL_IP}, ` +
-            `listens on 0.0.0.0, and shares the Wi-Fi with this phone.`
-        );
+        console.log(`Backend unreachable at ${LOCAL_IP}.`);
 
-        message = `Cannot reach the backend at ${LOCAL_IP}. Check your Wi-Fi.`;
+        message = "Cannot reach the server. Check your internet connection.";
       } else if (err?.name === "AbortError") {
         message = "Login request timed out. Check your backend connection.";
       } else if (err?.message) {
@@ -504,11 +493,12 @@ export default function LoginScreen({ navigation }: Props) {
                 transform: [{ translateY: enterShift }],
               }}
             >
-              {/* <Image source={LOGO} style={styles.logo} resizeMode="contain" /> */}
-<Text style={styles.title}>Welcome back 👋</Text>
-<Text style={styles.subtitle}>
-  Log in to your workspace and get started.
-</Text>
+              <Image source={LOGO} style={styles.logo} resizeMode="contain" />
+
+              <Text style={styles.title}>Welcome back 👋</Text>
+              <Text style={styles.subtitle}>
+                Log in to your workspace and get started.
+              </Text>
 
 
               {/* ------------------------------------------- email */}
@@ -676,8 +666,8 @@ const styles = StyleSheet.create({
   },
 
   logo: {
-    width: 62,
-    height: 62,
+    width: 84,
+    height: 84,
     alignSelf: "center",
     marginBottom: 18,
   },

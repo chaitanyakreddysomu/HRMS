@@ -27,6 +27,8 @@ import {
 } from "../../components/ScreenActions";
 import { apiFetch, resetBaseUrl } from "../../utils/api";
 import ModalDismiss from "../../components/ModalDismiss";
+import RefreshSessionButton from "../../components/RefreshSessionButton";
+import { isAuthError } from "../../utils/authStorage";
 
 type Props = NativeStackScreenProps<RootStackParamList, "AdminPendingRequests">;
 
@@ -239,6 +241,13 @@ export default function PendingRequestsScreen({ navigation, embedded }: Props & 
             >
               {error}
             </Text>
+
+            {isAuthError(error) && (
+              <RefreshSessionButton
+                onDone={() => fetchRequests({ resetUrl: true })}
+              />
+            )}
+
             <TouchableOpacity
               onPress={() => fetchRequests({ resetUrl: true })}
               style={{

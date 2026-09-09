@@ -26,6 +26,8 @@ import {
 } from "../../components/ScreenActions";
 import { apiFetch, resetBaseUrl } from "../../utils/api";
 import ModalDismiss from "../../components/ModalDismiss";
+import RefreshSessionButton from "../../components/RefreshSessionButton";
+import { isAuthError } from "../../utils/authStorage";
 
 type Props = NativeStackScreenProps<RootStackParamList, "AdminReferrals">;
 
@@ -605,6 +607,9 @@ export default function AdminReferralsScreen({ navigation, embedded }: Props & {
             >
               {error}
             </Text>
+            {isAuthError(error) && (
+              <RefreshSessionButton onDone={onRefresh} />
+            )}
             <TouchableOpacity
               onPress={onRefresh}
               style={{ paddingHorizontal: 20, paddingVertical: 10, backgroundColor: "#2563EB", borderRadius: 8 }}

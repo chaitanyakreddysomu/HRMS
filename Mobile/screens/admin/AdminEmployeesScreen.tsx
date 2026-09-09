@@ -32,6 +32,8 @@ import {
 import { apiFetch, resetBaseUrl } from "../../utils/api";
 import { useToast } from "../../components/Toast";
 import ModalDismiss from "../../components/ModalDismiss";
+import RefreshSessionButton from "../../components/RefreshSessionButton";
+import { isAuthError } from "../../utils/authStorage";
 
 type Props = NativeStackScreenProps<
   RootStackParamList,
@@ -1184,6 +1186,10 @@ export default function AdminEmployeesScreen({
             >
               {error}
             </Text>
+
+            {isAuthError(error) && (
+              <RefreshSessionButton onDone={() => fetchEmployees(1)} />
+            )}
 
             <TouchableOpacity
               onPress={() =>

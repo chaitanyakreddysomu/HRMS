@@ -29,6 +29,8 @@ import {
 import { apiFetch, resetBaseUrl } from "../../utils/api";
 import { useRegisterScreenAction } from "../../components/ScreenActions";
 import ModalDismiss from "../../components/ModalDismiss";
+import RefreshSessionButton from "../../components/RefreshSessionButton";
+import { isAuthError } from "../../utils/authStorage";
 
 type Props = NativeStackScreenProps<RootStackParamList, "AdminAttendance">;
 
@@ -618,6 +620,9 @@ export default function AdminAttendanceScreen({ navigation, embedded }: Props & 
             <Text style={{ color: "#111827", fontSize: 16, fontWeight: "600", textAlign: "center", marginBottom: 8 }}>
               {error}
             </Text>
+            {isAuthError(error) && (
+              <RefreshSessionButton onDone={onRefresh} />
+            )}
             <TouchableOpacity
               onPress={onRefresh}
               style={{ paddingHorizontal: 20, paddingVertical: 10, backgroundColor: "#2563EB", borderRadius: 8 }}
