@@ -10,10 +10,13 @@ const userSchema = new mongoose.Schema({
     department: { type: String },
     package: { type: Number, default: 0 }, // Annual Package
     status: { type: String, enum: ['Active', 'Inactive', 'Pending', 'Rejected'], default: 'Pending' },
+    /** true for an account still on its default password, e.g. one an admin just created */
+    mustChangePassword: { type: Boolean, default: false },
     joiningDate: { type: Date },
     phone: { type: String },
     address: { type: String },
     dob: { type: Date },
+    gender: { type: String, enum: ['Male', 'Female', 'Other'] },
     bloodGroup: { type: String },
     emergencyContact: {
         name: String,

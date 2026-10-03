@@ -5,6 +5,7 @@ import { Topbar } from "./Topbar";
 import { useAuth } from "@/context/AuthContext";
 import { Login } from "@/pages/Login";
 import { BirthdayPopup } from "../BirthdayPopup";
+import { ChangePasswordPopup } from "../ChangePasswordPopup";
 import Customize from "@/pages/admin/Customize";
 import { Palette } from "lucide-react";
 
@@ -20,6 +21,7 @@ export function MainLayout() {
 
     return (
         <div className="flex h-screen bg-white overflow-hidden relative">
+            <ChangePasswordPopup />
             <BirthdayPopup />
             <Sidebar />
             <div className="flex flex-1 flex-col overflow-hidden">

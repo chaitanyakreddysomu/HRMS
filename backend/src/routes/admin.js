@@ -25,6 +25,7 @@ router.patch('/pending-requests/:id', auth, adminController.updateRequestStatus)
 
 // Employee Management Routes
 router.get('/employees', auth, adminController.getAllEmployees);
+router.post('/employees', auth, adminController.createEmployee);
 router.get('/employees/:id', auth, adminController.getEmployeeById);
 router.put('/employees/:id', auth, adminController.updateEmployee);
 router.get('/employee-bank-details', auth, adminController.getEmployeeBankDetails);

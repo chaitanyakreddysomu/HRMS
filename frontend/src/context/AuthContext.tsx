@@ -8,6 +8,8 @@ interface AuthContextType {
     login: (role: Role, userData?: User) => void;
     logout: () => void;
     isAuthenticated: boolean;
+    /** patches fields on the signed-in user without a round trip */
+    patchUser: (patch: Partial<User>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -89,8 +91,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         localStorage.removeItem("refresh_token");
     };
 
+    const patchUser = (patch: Partial<User>) => {
+        setUser((current) => {
+            if (!current) return current;
+            const updated = { ...current, ...patch };
+            localStorage.setItem("hrms_user", JSON.stringify(updated));
+            return updated;
+        });
+    };
+
     return (
-        <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user }}>
+        <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user, patchUser }}>
             {children}
         </AuthContext.Provider>
     );

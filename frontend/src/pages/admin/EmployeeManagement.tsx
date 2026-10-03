@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 import { Badge } from "@/components/ui/badge";
-import { Search, Edit, ClipboardList, Users, UserCheck, UserX, Eye, EyeOff, Phone, Building2, Heart, AlertCircle, FileText, ShieldCheck, Loader2, type LucideIcon } from "lucide-react";
+import { Search, Edit, ClipboardList, Users, UserCheck, UserX, Eye, EyeOff, Phone, Building2, Heart, AlertCircle, FileText, ShieldCheck, Loader2, PlusCircle, Copy, Check, type LucideIcon } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import {
     Dialog,
@@ -36,6 +36,19 @@ export default function AdminEmployeeManagement() {
     const [isInitialLoading, setIsInitialLoading] = useState(true);
     const [isTableLoading, setIsTableLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+
+    // Add Employee
+    const emptyNewEmployee = {
+        name: "", email: "", phone: "", department: "", designation: "",
+        role: "EMPLOYEE" as "EMPLOYEE" | "HR" | "ADMIN",
+        dob: "", gender: "", bloodGroup: "", address: "",
+        joiningDate: "", package: ""
+    };
+    const [addEmployeeOpen, setAddEmployeeOpen] = useState(false);
+    const [isAddingEmployee, setIsAddingEmployee] = useState(false);
+    const [newEmployee, setNewEmployee] = useState(emptyNewEmployee);
+    const [createdCredentials, setCreatedCredentials] = useState<{ id: string; email: string; tempPassword: string } | null>(null);
+    const [copiedPassword, setCopiedPassword] = useState(false);
 
     // Pagination & Stats State
     const [currentPage, setCurrentPage] = useState(1);
@@ -165,6 +178,52 @@ export default function AdminEmployeeManagement() {
         }
     };
 
+    const closeAddEmployee = () => {
+        setAddEmployeeOpen(false);
+        setCreatedCredentials(null);
+        setCopiedPassword(false);
+        setNewEmployee(emptyNewEmployee);
+    };
+
+    const handleAddEmployee = async () => {
+        if (!newEmployee.name.trim() || !newEmployee.email.trim()) {
+            alert("Name and email are required");
+            return;
+        }
+
+        setIsAddingEmployee(true);
+
+        try {
+            const token = localStorage.getItem('token');
+            const response = await apiFetch(`/api/admin/employees`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({
+                    ...newEmployee,
+                    package: newEmployee.package ? parseFloat(newEmployee.package) : undefined,
+                })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                setAllEmployees(prev => [data.user, ...prev]);
+                setCreatedCredentials({
+                    id: data.user.id,
+                    email: data.user.email,
+                    tempPassword: data.tempPassword
+                });
+            } else {
+                alert(`Failed to add employee: ${data.message}`);
+            }
+        } catch (error) {
+            console.error("Error adding employee:", error);
+            alert("Could not reach the server.");
+        } finally {
+            setIsAddingEmployee(false);
+        }
+    };
+
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
             {/* ... Header and Stats ... */}
@@ -178,10 +237,13 @@ export default function AdminEmployeeManagement() {
                         <h1 className="text-3xl font-bold tracking-tight text-slate-900">Employee Management</h1>
                     </div>
                 </div>
-                {/* <Button className="bg-violet-600 text-white shadow-lg shadow-violet-600/30 hover:bg-violet-700 active:scale-95 transition-all">
+                <Button
+                    className="bg-violet-600 text-white shadow-lg shadow-violet-600/30 hover:bg-violet-700 active:scale-95 transition-all"
+                    onClick={() => setAddEmployeeOpen(true)}
+                >
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Add Employee
-                </Button> */}
+                </Button>
             </div>
 
 
@@ -860,6 +922,224 @@ export default function AdminEmployeeManagement() {
                             </div>
                         </DialogContent>
                     </Dialog >
+
+                    {/* Add Employee */}
+                    <Dialog open={addEmployeeOpen} onOpenChange={(open) => !open && closeAddEmployee()}>
+                        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto [&::-webkit-scrollbar]:w-[5px] [&::-webkit-scrollbar-thumb]:bg-slate-300 [&::-webkit-scrollbar-thumb]:rounded-full">
+                            {createdCredentials ? (
+                                <>
+                                    <DialogHeader>
+                                        <DialogTitle className="text-2xl font-bold flex items-center gap-3 pb-4 border-b">
+                                            <UserCheck className="h-6 w-6 text-green-600" />
+                                            Employee Added
+                                        </DialogTitle>
+                                    </DialogHeader>
+
+                                    <div className="space-y-4 py-2">
+                                        <p className="text-sm text-muted-foreground">
+                                            Share these sign-in details with {createdCredentials.id}. They'll be asked to set a new password the moment they log in with it.
+                                        </p>
+
+                                        <div className="space-y-3 border rounded-lg p-4 bg-slate-50">
+                                            <div className="flex justify-between items-center">
+                                                <Label className="text-xs text-muted-foreground uppercase">Employee ID</Label>
+                                                <span className="font-semibold text-sm">{createdCredentials.id}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <Label className="text-xs text-muted-foreground uppercase">Email</Label>
+                                                <span className="font-semibold text-sm">{createdCredentials.email}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <Label className="text-xs text-muted-foreground uppercase">Default Password</Label>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-mono font-semibold text-sm">{createdCredentials.tempPassword}</span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            navigator.clipboard.writeText(createdCredentials.tempPassword);
+                                                            setCopiedPassword(true);
+                                                            setTimeout(() => setCopiedPassword(false), 1500);
+                                                        }}
+                                                        className="text-muted-foreground hover:text-foreground"
+                                                    >
+                                                        {copiedPassword ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex justify-end gap-3 pt-4 border-t mt-2">
+                                        <Button className="text-white" onClick={closeAddEmployee}>Done</Button>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <DialogHeader>
+                                        <DialogTitle className="text-2xl font-bold flex items-center gap-3 pb-4 border-b">
+                                            <PlusCircle className="h-6 w-6 text-violet-600" />
+                                            Add Employee
+                                        </DialogTitle>
+                                    </DialogHeader>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-2">
+                                        <div className="space-y-2">
+                                            <Label>Full Name *</Label>
+                                            <Input
+                                                value={newEmployee.name}
+                                                onChange={(e) => setNewEmployee(prev => ({ ...prev, name: e.target.value }))}
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Email *</Label>
+                                            <Input
+                                                type="email"
+                                                value={newEmployee.email}
+                                                onChange={(e) => setNewEmployee(prev => ({ ...prev, email: e.target.value }))}
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Phone</Label>
+                                            <Input
+                                                value={newEmployee.phone}
+                                                onChange={(e) => setNewEmployee(prev => ({ ...prev, phone: e.target.value }))}
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Department</Label>
+                                            <Select
+                                                value={newEmployee.department}
+                                                onValueChange={(value) => setNewEmployee(prev => ({ ...prev, department: value }))}
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select Department" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="Engineering">Engineering</SelectItem>
+                                                    <SelectItem value="Human Resources">Human Resources</SelectItem>
+                                                    <SelectItem value="Sales">Sales</SelectItem>
+                                                    <SelectItem value="Marketing">Marketing</SelectItem>
+                                                    <SelectItem value="IT">IT</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Designation</Label>
+                                            <Input
+                                                value={newEmployee.designation}
+                                                onChange={(e) => setNewEmployee(prev => ({ ...prev, designation: e.target.value }))}
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Role</Label>
+                                            <Select
+                                                value={newEmployee.role}
+                                                onValueChange={(value) => setNewEmployee(prev => ({ ...prev, role: value as any }))}
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select Role" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="EMPLOYEE">Employee</SelectItem>
+                                                    <SelectItem value="HR">HR</SelectItem>
+                                                    <SelectItem value="ADMIN">Admin</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Date of Birth</Label>
+                                            <Input
+                                                type="date"
+                                                value={newEmployee.dob}
+                                                onChange={(e) => setNewEmployee(prev => ({ ...prev, dob: e.target.value }))}
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Gender</Label>
+                                            <Select
+                                                value={newEmployee.gender}
+                                                onValueChange={(value) => setNewEmployee(prev => ({ ...prev, gender: value }))}
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="Male">Male</SelectItem>
+                                                    <SelectItem value="Female">Female</SelectItem>
+                                                    <SelectItem value="Other">Other</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Blood Group</Label>
+                                            <Select
+                                                value={newEmployee.bloodGroup}
+                                                onValueChange={(value) => setNewEmployee(prev => ({ ...prev, bloodGroup: value }))}
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="A+">A+</SelectItem>
+                                                    <SelectItem value="A-">A-</SelectItem>
+                                                    <SelectItem value="B+">B+</SelectItem>
+                                                    <SelectItem value="B-">B-</SelectItem>
+                                                    <SelectItem value="AB+">AB+</SelectItem>
+                                                    <SelectItem value="AB-">AB-</SelectItem>
+                                                    <SelectItem value="O+">O+</SelectItem>
+                                                    <SelectItem value="O-">O-</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Joining Date</Label>
+                                            <Input
+                                                type="date"
+                                                value={newEmployee.joiningDate}
+                                                onChange={(e) => setNewEmployee(prev => ({ ...prev, joiningDate: e.target.value }))}
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Annual Package (₹)</Label>
+                                            <Input
+                                                type="number"
+                                                value={newEmployee.package}
+                                                onChange={(e) => setNewEmployee(prev => ({ ...prev, package: e.target.value }))}
+                                                placeholder="e.g. 1200000"
+                                            />
+                                        </div>
+                                        <div className="space-y-2 md:col-span-2">
+                                            <Label>Address</Label>
+                                            <Input
+                                                value={newEmployee.address}
+                                                onChange={(e) => setNewEmployee(prev => ({ ...prev, address: e.target.value }))}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="flex justify-end gap-3 pt-4 border-t mt-2">
+                                        <Button variant="outline" onClick={closeAddEmployee} disabled={isAddingEmployee}>
+                                            Cancel
+                                        </Button>
+                                        <Button
+                                            className="text-white"
+                                            onClick={handleAddEmployee}
+                                            disabled={isAddingEmployee}
+                                        >
+                                            {isAddingEmployee ? (
+                                                <>
+                                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                    Adding...
+                                                </>
+                                            ) : (
+                                                "Add Employee"
+                                            )}
+                                        </Button>
+                                    </div>
+                                </>
+                            )}
+                        </DialogContent>
+                    </Dialog>
                 </>
             )
             }

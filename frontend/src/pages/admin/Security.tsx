@@ -56,6 +56,8 @@ export default function Security() {
     const [showDisableConfirm, setShowDisableConfirm] =
         useState<boolean>(false);
 
+    const [disableCode, setDisableCode] = useState<string>("");
+
     const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
     /* =========================
@@ -312,16 +314,24 @@ export default function Security() {
     ========================= */
 
     const handleDisable2FA = () => {
+        setDisableCode("");
         setShowDisableConfirm(true);
     };
 
     const executeDisable2FA = async () => {
+        const code = disableCode.replace(/\D/g, "");
+
+        if (code.length !== 6) {
+            addToast("Enter the 6-digit code from your authenticator app.", "error");
+            return;
+        }
+
         setIsActionLoading(true);
-        setShowDisableConfirm(false);
 
         try {
             const res = await apiFetch("/api/auth/2fa/disable", {
                 method: "POST",
+                body: JSON.stringify({ code }),
             });
 
             if (res.ok) {
@@ -334,9 +344,16 @@ export default function Security() {
                 setSetupData(null);
                 setVerificationDigits(Array(6).fill(""));
                 setVerificationStatus("idle");
+                setDisableCode("");
+                setShowDisableConfirm(false);
             } else {
+                let data: any = {};
+                try {
+                    data = await res.json();
+                } catch { }
+
                 addToast(
-                    "Failed to disable authentication.",
+                    data.message || "Failed to disable authentication.",
                     "error"
                 );
             }
@@ -1122,6 +1139,25 @@ export default function Security() {
 
                         </div>
 
+                        <div className="space-y-2">
+                            <Label htmlFor="disable-2fa-code" className="text-xs font-semibold text-slate-700">
+                                Enter the 6-digit code from your authenticator app
+                            </Label>
+                            <Input
+                                id="disable-2fa-code"
+                                inputMode="numeric"
+                                autoComplete="one-time-code"
+                                maxLength={6}
+                                placeholder="000000"
+                                value={disableCode}
+                                onChange={(e) =>
+                                    setDisableCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+                                }
+                                className="text-center text-lg tracking-[0.5em] font-semibold"
+                                disabled={isActionLoading}
+                            />
+                        </div>
+
                     </div>
 
                     {/* FOOTER */}
@@ -1131,7 +1167,10 @@ export default function Security() {
                         <Button
                             type="button"
                             variant="outline"
-                            onClick={() => setShowDisableConfirm(false)}
+                            onClick={() => {
+                                setShowDisableConfirm(false);
+                                setDisableCode("");
+                            }}
                             className="h-10"
                             disabled={isActionLoading}
                         >
@@ -1142,7 +1181,7 @@ export default function Security() {
                             type="button"
                             variant="destructive"
                             onClick={executeDisable2FA}
-                            disabled={isActionLoading}
+                            disabled={isActionLoading || disableCode.length !== 6}
                             className="h-10 font-semibold"
                         >
 

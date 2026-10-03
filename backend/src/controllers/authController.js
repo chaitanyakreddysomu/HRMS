@@ -86,7 +86,8 @@ exports.login = async (req, res) => {
                 email: user.email,
                 avatar: user.avatar,
                 profileImage: user.profileImage,
-                dob: user.dob
+                dob: user.dob,
+                mustChangePassword: user.mustChangePassword
             }
         });
     } catch (error) {
@@ -223,7 +224,8 @@ exports.verify2FALogin = async (req, res) => {
                 email: user.email,
                 avatar: user.avatar,
                 profileImage: user.profileImage,
-                dob: user.dob
+                dob: user.dob,
+                mustChangePassword: user.mustChangePassword
             }
         });
     } catch (error) {
@@ -344,3 +346,44 @@ exports.disable2FA = async (req, res) => {
     }
 };
 
+
+/**
+ * Forced on a default-password account (mustChangePassword), and
+ * usable any time otherwise. The current password is required even
+ * when it is still the default "1234": the field exists so this
+ * route cannot be used to overwrite someone else's password with
+ * only a valid session.
+ */
+exports.changePassword = async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({ message: "Current and new password are required" });
+        }
+
+        if (String(newPassword).length < 4) {
+            return res.status(400).json({ message: "New password must be at least 4 characters" });
+        }
+
+        const user = await User.findById(req.user.mongoId);
+        if (!user) return res.status(404).json({ message: "User not found" });
+
+        const isMatch = await bcrypt.compare(currentPassword, user.password);
+        if (!isMatch) {
+            return res.status(400).json({ message: "Current password is incorrect" });
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(newPassword, salt);
+        user.mustChangePassword = false;
+        await user.save();
+
+        await logger.logAction(req, user, 'Auth', 'Password', 'Password changed', 'Success');
+
+        res.json({ message: "Password updated successfully" });
+    } catch (error) {
+        console.error("Change Password Error:", error);
+        res.status(500).json({ message: "Server Error" });
+    }
+};

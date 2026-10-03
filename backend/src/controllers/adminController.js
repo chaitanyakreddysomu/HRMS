@@ -409,6 +409,94 @@ exports.updateRequestStatus = async (req, res) => {
         res.status(500).json({ message: "Server Error" });
     }
 };
+
+/**
+ * Every admin-created account starts on this same password rather
+ * than a generated one: it is easier to tell a new hire "1234" than
+ * to relay a random string, and mustChangePassword forces it off
+ * before the account is used for anything.
+ */
+const DEFAULT_PASSWORD = '1234';
+
+/**
+ * An admin entering a new hire directly, as opposed to approving a
+ * self-registration. The account is Active immediately: there is
+ * nobody else's submission here to vet.
+ */
+exports.createEmployee = async (req, res) => {
+    try {
+        if (req.user.role !== 'ADMIN') {
+            return res.status(403).json({ message: "Only an admin can add an employee" });
+        }
+
+        const {
+            name, email, role, designation, department, phone,
+            address, dob, gender, bloodGroup, joiningDate, package: pkg
+        } = req.body;
+
+        if (!name || !email) {
+            return res.status(400).json({ message: "Name and email are required" });
+        }
+
+        const existingUser = await User.findOne({ email });
+        if (existingUser) return res.status(400).json({ message: "A user with this email already exists" });
+
+        // Auto-generate ID — only look at EMP-prefixed users, same as self-signup
+        const lastEmpUser = await User.findOne({ id: /^EMP\d+$/ }).sort({ id: -1 });
+        let newId = "EMP001";
+        if (lastEmpUser && lastEmpUser.id) {
+            const lastIdNum = parseInt(lastEmpUser.id.replace("EMP", ""), 10);
+            if (!isNaN(lastIdNum)) {
+                newId = `EMP${(lastIdNum + 1).toString().padStart(3, '0')}`;
+            }
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(DEFAULT_PASSWORD, salt);
+
+        const newUser = new User({
+            id: newId,
+            name,
+            email,
+            password: hashedPassword,
+            role: role || 'EMPLOYEE',
+            designation,
+            department,
+            phone,
+            address,
+            dob: dob || undefined,
+            gender: gender || undefined,
+            bloodGroup,
+            joiningDate: joiningDate || new Date(),
+            package: pkg || 0,
+            status: 'Active',
+            mustChangePassword: true
+        });
+
+        await newUser.save();
+
+        await logger.logAction(
+            req,
+            req.user,
+            'Employee Management',
+            'Create',
+            `Added employee ${newUser.name} (${newUser.id})`,
+            'Success'
+        );
+
+        const { password, ...userWithoutPassword } = newUser.toObject();
+
+        res.status(201).json({
+            message: "Employee added successfully",
+            user: userWithoutPassword,
+            tempPassword: DEFAULT_PASSWORD
+        });
+    } catch (error) {
+        console.error("Create Employee Error:", error);
+        res.status(500).json({ message: "Server Error" });
+    }
+};
+
 // Payslip Management
 exports.createPayslip = async (req, res) => {
     try {

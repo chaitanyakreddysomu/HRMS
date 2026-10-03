@@ -16,6 +16,7 @@ export interface User {
     phone?: string;
     address?: string;
     dob?: string;
+    gender?: "Male" | "Female" | "Other";
     bloodGroup?: string;
     emergencyContact?: { name: string; phone: string };
     uan?: string;
@@ -28,6 +29,7 @@ export interface User {
     };
     projectStatus?: "In Project" | "Bench" | "Training";
     package?: number; // Annual Package
+    mustChangePassword?: boolean;
 }
 
 export interface AttendanceRecord {
