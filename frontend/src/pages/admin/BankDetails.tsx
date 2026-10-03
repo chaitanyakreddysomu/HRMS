@@ -567,6 +567,15 @@ export default function AdminBankDetails() {
                             <span className="font-medium text-slate-900">
                                 {totalPages === 0 ? 1 : totalPages}
                             </span>
+                            {totalRecords > 0 && (
+                                <>
+                                    {" · "}
+                                    <span className="font-medium text-slate-900">
+                                        {totalRecords}
+                                    </span>{" "}
+                                    {totalRecords === 1 ? "record" : "records"}
+                                </>
+                            )}
                         </div>
 
                         <div className="flex gap-2">

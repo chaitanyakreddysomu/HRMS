@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog";
-import { Eye, EyeOff, Mail, Lock, ArrowRight, User, Phone, Building, Briefcase, CheckCircle2, Shield, ShieldCheck, ShieldAlert } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, ArrowRight, User, Phone, Building, Briefcase, CheckCircle2, ShieldCheck, ShieldAlert } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import icsLogo from "../assets/ics_logo.jpeg";
 

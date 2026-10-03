@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import {
     Card,
     CardContent,
-    CardDescription,
+    
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
@@ -18,7 +18,6 @@ import {
     Copy,
     Check,
     Loader2,
-    LockKeyhole,
     AlertTriangle,
     ArrowRight,
 } from "lucide-react";

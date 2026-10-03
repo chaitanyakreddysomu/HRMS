@@ -311,7 +311,7 @@ export default function TwoFactorManagement() {
                             </TableCell>
                         </TableRow>
                     ) : (
-                        users.map((user, index) => (
+                        users.map((user) => (
                             <TableRow
                                 key={user._id}
                                 className="group border-b border-slate-100 transition-colors hover:bg-primary/[0.025]"

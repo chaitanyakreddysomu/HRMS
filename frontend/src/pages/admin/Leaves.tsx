@@ -264,16 +264,16 @@ export default function AdminLeaves() {
         }
     };
 
-    const getDuration = (start: string, end: string) => {
-        const s = new Date(start);
-        const e = new Date(end);
+    // const getDuration = (start: string, end: string) => {
+    //     const s = new Date(start);
+    //     const e = new Date(end);
 
-        const diffTime = Math.abs(e.getTime() - s.getTime());
-        const diffDays =
-            Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    //     const diffTime = Math.abs(e.getTime() - s.getTime());
+    //     const diffDays =
+    //         Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
 
-        return diffDays === 1 ? "1 Day" : `${diffDays} Days`;
-    };
+    //     return diffDays === 1 ? "1 Day" : `${diffDays} Days`;
+    // };
 
     const formatDateTime = (date?: string) => {
         if (!date) {
