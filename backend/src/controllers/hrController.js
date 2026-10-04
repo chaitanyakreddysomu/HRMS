@@ -474,7 +474,7 @@ exports.createHRNotification = async (req, res) => {
         recipients = recipients.filter(id => id !== req.user.id);
 
         // Notify each recipient directly - writes the DB record and pushes
-        // to every device they've registered, Expo (mobile) and FCM (web).
+        // to every device they've registered via Expo.
         await Promise.all(recipients.map(userId => notifyUser(userId, {
             title,
             body: message,
@@ -896,7 +896,7 @@ exports.updateLeaveStatus = async (req, res) => {
 
                 if (notifTitle) {
                     // Writes the DB record and pushes to every device the
-                    // employee has registered, Expo (mobile) and FCM (web).
+                    // employee has registered via Expo.
                     await notifyUser(user.id, {
                         title: notifTitle,
                         body: notifMessage,

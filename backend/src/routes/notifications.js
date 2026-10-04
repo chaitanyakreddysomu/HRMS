@@ -5,19 +5,13 @@ const auth = require('../middleware/auth');
 router.post('/', auth, notificationController.createNotification);
 router.get('/', auth, notificationController.getNotifications);
 
-router.post('/subscribe', auth, notificationController.subscribe);
-router.post('/register-fcm', auth, notificationController.registerFCM);
-
-// Mobile app: Expo push, alongside the FCM path the browser uses
+// Mobile app: push is Expo-only now, browser push (Firebase/FCM) removed
 router.post('/register-expo', auth, notificationController.registerExpo);
 router.post('/unregister-expo', auth, notificationController.unregisterExpo);
-router.post('/unregister-fcm', auth, notificationController.unregisterFCM);
 
 router.get('/unread-count', auth, notificationController.getUnreadCount);
 router.patch('/read-all', auth, notificationController.markAllRead);
 
-router.get('/check-fcm-status', auth, notificationController.checkFCMStatus);
-router.post('/test-fcm', auth, notificationController.sendTestFCM);
 router.post('/test-expo', auth, notificationController.sendTestExpo);
 
 // Anything with an id goes last, so it cannot swallow the named routes

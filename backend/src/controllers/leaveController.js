@@ -141,9 +141,7 @@ exports.updateLeaveStatus = async (req, res) => {
 
                 if (notifTitle) {
                     // Writes the record and pushes it to every device
-                    // this person has, phone and browser alike. (Also
-                    // handles dropping any FCM token Firebase rejects -
-                    // no need to duplicate that here.)
+                    // this person has registered via Expo.
                     await notifyUser(user.id, {
                         title: notifTitle,
                         body: notifMessage,

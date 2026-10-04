@@ -21,69 +21,6 @@ export function Topbar() {
     const [notifications, setNotifications] = useState<any[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
 
-    // Initialize Firebase Cloud Messaging
-    const initFCM = async () => {
-        if (user) {
-            try {
-                const { requestFCMToken, onMessageListener } = await import('@/firebase');
-
-                // Get token and sync with backend
-                const token = await requestFCMToken();
-
-                if (token) {
-                    // We successfully initialized Firebase Messaging
-                    // We do NOT auto-register here. Registration is manual via "Enable Push".
-                    console.log("FCM Initialized (Listener Active)");
-                }
-
-                // Listen for foreground messages
-                onMessageListener().then((payload: any) => {
-                    console.log('Foreground Message:', payload);
-                    const { title, body } = payload.notification;
-                    // 1. Show In-App Toast
-                    addToast(`${title}: ${body}`, "info");
-
-                    // 2. Show Browser Notification (even if app is open)
-                    if (Notification.permission === "granted") {
-                        new Notification(title, {
-                            body: body,
-                            icon: "/vite.svg"
-                        });
-                    }
-
-                    // We can also trigger refresh of notification list here
-                    fetchNotifications();
-                });
-
-            } catch (err) {
-                console.log("FCM Init Error (likely config missing):", err);
-            }
-        }
-    };
-
-    useEffect(() => {
-        // Only auto-init if permission is ALREADY granted
-        if (user && Notification.permission === "granted") {
-            initFCM();
-        }
-    }, [user]);
-
-    const requestPermission = () => {
-        if (!("Notification" in window)) {
-            addToast("This browser does not support desktop notification", "error");
-        } else if (Notification.permission === "granted") {
-            addToast("Notifications are already enabled!", "success");
-            initFCM(); // Re-sync if needed
-        } else if (Notification.permission !== "denied") {
-            Notification.requestPermission().then((permission) => {
-                if (permission === "granted") {
-                    addToast("Notifications enabled!", "success");
-                    initFCM(); // Initialize now that we have permission
-                }
-            });
-        }
-    };
-
     const fetchNotifications = async () => {
         if (!user) return;
         try {
@@ -226,35 +163,6 @@ export function Topbar() {
                             )}
                         </div>
                         <div className="p-2 border-t bg-slate-50/50 flex flex-col gap-2">
-                            <div className="flex gap-2">
-                                <Button variant="outline" size="sm" className="flex-1 text-[10px] h-7" onClick={requestPermission}>
-                                    Enable Push
-                                </Button>
-                                <Button variant="outline" size="sm" className="flex-1 text-[10px] h-7" onClick={async () => {
-                                    // Local Toast Immediate
-                                    addToast("Sending Test FCM...", "info");
-
-                                    try {
-                                        const token = localStorage.getItem('token');
-                                        const res = await apiFetch('/api/notifications/test-fcm', {
-                                            method: 'POST',
-                                            headers: { 'Authorization': `Bearer ${token}` }
-                                        });
-                                        if (res.ok) {
-                                            const data = await res.json();
-                                            addToast(data.message, "success");
-                                        } else {
-                                            const err = await res.json();
-                                            addToast(`Error: ${err.message}`, "error");
-                                        }
-                                    } catch (e) {
-                                        console.error(e);
-                                        addToast("Failed to trigger server test", "error");
-                                    }
-                                }}>
-                                    Test Notification
-                                </Button>
-                            </div>
                             <Button variant="ghost" size="sm" className="w-full text-xs h-8" onClick={() => navigate(user?.role === 'ADMIN' ? '/admin-notifications' : '/notifications')}>
                                 View All Notifications
                             </Button>

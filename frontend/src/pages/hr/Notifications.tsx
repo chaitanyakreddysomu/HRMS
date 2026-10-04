@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { apiFetch } from "@/config/api";
-import { useToast } from "@/context/ToastContext";
 import { formatDistanceToNow } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BellRing, CheckCircle2, AlertTriangle, Info, PlusCircle, Send, Check, Search } from "lucide-react";
-import { cn, getDeviceId } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import {
     Dialog,
     DialogContent,
@@ -38,44 +37,6 @@ export default function HRNotifications() {
     const [selectedMyNotification, setSelectedMyNotification] = useState<any | null>(null);
     const [myLoading, setMyLoading] = useState(false);
     const [myFilter, setMyFilter] = useState<'all' | 'unread'>('all');
-    const { addToast } = useToast();
-
-    // --- PUSH NOTIFICATIONS ---
-    const requestPermission = async () => {
-        if (!("Notification" in window)) {
-            addToast("This browser does not support desktop notification", "error");
-            return;
-        }
-
-        if (Notification.permission === "granted") {
-            addToast("Notifications are already enabled!", "success");
-            return;
-        }
-
-        try {
-            const permission = await Notification.requestPermission();
-            if (permission === "granted") {
-                addToast("Notifications enabled!", "success");
-                const { requestFCMToken } = await import('@/firebase');
-                const token = await requestFCMToken();
-                if (token) {
-                    const authToken = localStorage.getItem('token');
-                    let deviceName = "Web Browser";
-                    if (navigator.userAgent.indexOf("Chrome") != -1) deviceName = "Chrome";
-
-                    const deviceId = getDeviceId();
-
-                    await apiFetch('/api/notifications/register-fcm', {
-                        method: 'POST',
-                        headers: { 'Authorization': `Bearer ${authToken}` },
-                        body: JSON.stringify({ token, device: deviceName, deviceId })
-                    });
-                }
-            }
-        } catch (error) {
-            console.error("Permission request failed", error);
-        }
-    };
 
     // --- FETCH DATA ---
 
@@ -220,46 +181,6 @@ export default function HRNotifications() {
     // Direct usage since server handles filtering
     const filteredMyNotifications = myNotifications;
 
-    const [pushEnabled, setPushEnabled] = useState(false);
-
-    useEffect(() => {
-        if ('Notification' in window && Notification.permission === 'granted') {
-            setPushEnabled(true);
-        }
-    }, []);
-
-    const enableNotifications = async () => {
-        if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
-            alert("Notifications supported only in Chrome / Edge");
-            return;
-        }
-
-        const permission = await Notification.requestPermission();
-        if (permission === 'granted') {
-            setPushEnabled(true);
-        } else {
-            alert("Permission denied");
-            return;
-        }
-
-
-        const reg = await navigator.serviceWorker.register("/sw.js");
-        const sub = await reg.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: import.meta.env.VITE_VAPID_PUBLIC_KEY
-        });
-
-        const token = localStorage.getItem('token');
-        await apiFetch("/api/notifications/subscribe", {
-            method: "POST",
-            headers: {
-                "Authorization": `Bearer ${token}`
-            },
-            body: JSON.stringify(sub)
-        });
-        alert('Subscription successful!');
-    };
-
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
             {/* HEADER */}
@@ -273,19 +194,6 @@ export default function HRNotifications() {
                     </h1>
                     <p className="text-muted-foreground mt-1 ml-14">Manage updates for employees and check your inbox.</p>
                 </div>
-                <Button
-                    variant={pushEnabled ? "outline" : "default"}
-                    className={pushEnabled ? "bg-green-100 text-green-700 border-green-200 hover:bg-green-100 hover:text-green-700 cursor-default" : "bg-amber-600 text-white hover:bg-amber-700"}
-                    onClick={!pushEnabled ? enableNotifications : undefined}
-                >
-                    {pushEnabled ? (
-                        <>
-                            <CheckCircle2 className="mr-2 h-4 w-4" /> Live Alerts Enabled
-                        </>
-                    ) : (
-                        "Enable Live Alerts"
-                    )}
-                </Button>
             </div>
 
             <Tabs defaultValue="employee-notifications" className="w-full">
@@ -454,15 +362,6 @@ export default function HRNotifications() {
                             <p className="text-muted-foreground text-sm">Notifications received from System or Admin.</p>
                         </div>
                         <div className="flex items-center gap-3">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={requestPermission}
-                                className="h-9 text-xs font-medium text-amber-700 bg-amber-50 border-amber-200 hover:bg-amber-100 hover:text-amber-800"
-                            >
-                                <BellRing className="w-3.5 h-3.5 mr-2" />
-                                Enable Push
-                            </Button>
                             <div className="relative flex items-center bg-slate-100 p-1 rounded-lg w-[180px] h-9">
                                 <div
                                     className={cn(

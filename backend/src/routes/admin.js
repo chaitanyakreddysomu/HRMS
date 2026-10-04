@@ -83,7 +83,7 @@ router.put('/leaves/:id', async (req, res) => {
 
                 if (notifTitle) {
                     // Writes the DB record and pushes to every device the
-                    // employee has registered, Expo (mobile) and FCM (web).
+                    // employee has registered via Expo.
                     await notifyUser(user.id, {
                         title: notifTitle,
                         body: notifMessage,
@@ -120,7 +120,6 @@ router.delete('/policies/:id', adminController.deletePolicy);
 router.get('/notifications/sent', adminController.getSentNotifications);
 router.get('/notifications', adminController.getAdminNotifications);
 router.post('/notifications', adminController.createAdminNotification);
-router.post('/notifications/fcm-token', adminController.saveFCMToken); // NEW
 router.get('/notifications/:id', adminController.getNotificationById);
 router.patch('/notifications/:id', adminController.updateNotificationStatus);
 

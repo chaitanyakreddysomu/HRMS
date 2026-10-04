@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Info, CheckCircle2, AlertTriangle, BellRing, Check } from "lucide-react";
 
-import { cn, getDeviceId } from "@/lib/utils"
+import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from "date-fns";
@@ -16,11 +16,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 
-import { requestFCMToken, onMessageListener } from "@/firebase";
-import { useToast } from "@/context/ToastContext";
-
 export default function Notifications() {
-    const { addToast } = useToast();
     const [filter, setFilter] = useState<'all' | 'unread'>('all');
     const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
     const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -42,117 +38,9 @@ export default function Notifications() {
         }
     };
 
-    const [isRegistered, setIsRegistered] = useState(false);
-
     useEffect(() => {
         fetchNotifications();
-
-        // 1. Initial heuristic check
-        const localReg = localStorage.getItem('fcm_registered');
-        if (Notification.permission === 'granted' && localReg) {
-            setIsRegistered(true);
-        }
-
-        // 2. Deep Verify with Backend (Self-healing)
-        const checkBackendStatus = async () => {
-            const token = await requestFCMToken(); // Get strict current token
-            if (token) {
-                const authToken = localStorage.getItem('token');
-                const deviceId = getDeviceId();
-                try {
-                    const res = await apiFetch(`/api/notifications/check-fcm-status?token=${encodeURIComponent(token)}&deviceId=${deviceId}`, {
-                        headers: { 'Authorization': `Bearer ${authToken}` }
-                    });
-                    if (res.ok) {
-                        const data = await res.json();
-                        // Backend says NO, so we must show "Enable" button again
-                        if (!data.registered) {
-                            console.warn("Local says registered, but backend mismatch. Resetting.");
-                            localStorage.removeItem('fcm_registered');
-                            setIsRegistered(false);
-                            // setNotificationPermission("default"); // Force UI update
-                        } else {
-                            // Backend says YES, ensure local is synced
-                            if (!localReg) {
-                                localStorage.setItem('fcm_registered', 'true');
-                                setIsRegistered(true);
-                                // setNotificationPermission("granted");
-                            }
-                        }
-                    }
-                } catch (e) {
-                    console.error("Failed to verify FCM status", e);
-                }
-            }
-        };
-
-        // Only verify if we think we might have permission or want to be sure
-        if (Notification.permission === 'granted') {
-            checkBackendStatus();
-        }
-
-        onMessageListener().then((payload: any) => {
-            console.log("Foreground notification:", payload);
-            addToast(`New Notification: ${payload.notification?.title}`, "info");
-            fetchNotifications();
-        }).catch((err) => console.log('failed: ', err));
     }, []);
-
-    const handleEnableNotifications = async () => {
-        try {
-            const token = await requestFCMToken();
-            if (token) {
-                try {
-                    // Register device with backend
-                    const authToken = localStorage.getItem('token');
-                    // Use a simplified User Agent or Platform as Device Name
-                    let deviceName = "Unknown Device";
-                    if (navigator.userAgent.indexOf("Win") != -1) deviceName = "Windows PC";
-                    if (navigator.userAgent.indexOf("Mac") != -1) deviceName = "Mac";
-                    if (navigator.userAgent.indexOf("Linux") != -1) deviceName = "Linux";
-                    if (navigator.userAgent.indexOf("Android") != -1) deviceName = "Android";
-                    if (navigator.userAgent.indexOf("like Mac") != -1) deviceName = "iOS";
-
-                    // Append Browser
-                    if (navigator.userAgent.indexOf("Chrome") != -1) deviceName += " (Chrome)";
-                    else if (navigator.userAgent.indexOf("Firefox") != -1) deviceName += " (Firefox)";
-                    else if (navigator.userAgent.indexOf("Safari") != -1) deviceName += " (Safari)";
-
-                    const deviceId = getDeviceId();
-
-                    await apiFetch('/api/notifications/register-fcm', {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${authToken}`
-                        },
-                        body: JSON.stringify({ token, device: deviceName, deviceId })
-                    });
-
-                    localStorage.setItem('fcm_registered', 'true');
-                    // setNotificationPermission("granted");
-                    setIsRegistered(true);
-                    addToast("Live Alerts Enabled for this device!", "success");
-                } catch (error) {
-                    console.error("Registration failed", error);
-                    addToast("Failed to register device with server.", "error");
-                }
-            } else {
-                // Token null - Error occurred in firebase.ts
-                console.warn("Failed to enable notifications - No Token");
-
-                // Heuristic check for Brave or likely cause
-                if (Notification.permission === 'granted') {
-                    alert("Failed to connect to Push Service.\n\nIf you are using Brave Browser:\n1. Open Settings -> Privacy and security\n2. Enable 'Use Google Services for Push Messaging'\n3. Relaunch Brave.\n\nOtherwise, please try Chrome, Edge, or Firefox.");
-                } else if (Notification.permission === 'denied') {
-                    alert("Notifications are blocked. Please enable them in your browser settings (click the lock icon in the address bar).");
-                } else {
-                    alert("Failed to enable notifications. Please try again or check browser settings.");
-                }
-            }
-        } catch (e) {
-            console.error("Handle Enable Error:", e);
-        }
-    };
 
     const handleMarkAsRead = async (id: string, e?: React.MouseEvent) => {
         if (e) e.stopPropagation();
@@ -195,35 +83,6 @@ export default function Notifications() {
                     </h1>
                 </div>
                 <div className="flex gap-4 items-center">
-                    <div className="flex flex-col items-end gap-1">
-                        <Button
-                            onClick={handleEnableNotifications}
-                            disabled={isRegistered}
-                            variant={isRegistered ? "secondary" : "outline"}
-                            className={cn(
-                                "gap-2 transition-all",
-                                isRegistered
-                                    ? "bg-green-100 text-green-700 hover:bg-green-100 border-green-200 opacity-100"
-                                    : "border-primary/30 text-white hover:opacity-90"
-                            )}
-                        >
-                            {isRegistered ? (
-                                <>
-                                    <CheckCircle2 className="h-4 w-4" /> Live Alerts Enabled
-                                </>
-                            ) : (
-                                <>
-                                    <BellRing className="h-4 w-4" /> Enable Live Alerts
-                                </>
-                            )}
-                        </Button>
-                        {!isRegistered && (
-                            <p className="text-[10px] text-muted-foreground w-64 text-right leading-tight">
-                                Note: This is for only this device. If you want another device you need to enable again in that device and browser.
-                            </p>
-                        )}
-                    </div>
-
                     <div className="relative grid grid-cols-2 bg-white rounded-lg border border-primary shadow-lg p-1 w-fit select-none">
                         {/* Sliding indicator */}
                         <span

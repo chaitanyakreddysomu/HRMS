@@ -642,8 +642,7 @@ exports.updatePayslip = async (req, res) => {
 
                     if (notifTitle) {
                         // Writes the DB record and pushes to every device
-                        // the employee has registered, Expo (mobile) and
-                        // FCM (web) alike.
+                        // the employee has registered via Expo.
                         await notifyUser(user.id, {
                             title: notifTitle,
                             body: notifMessage,
@@ -991,7 +990,7 @@ exports.updateDocumentStatus = async (req, res) => {
 
                 if (notifTitle) {
                     // Writes the DB record and pushes to every device the
-                    // employee has registered, Expo (mobile) and FCM (web).
+                    // employee has registered via Expo.
                     await notifyUser(user.id, {
                         title: notifTitle,
                         body: notifMessage,
@@ -1303,7 +1302,7 @@ exports.updateLeaveStatus = async (req, res) => {
 
                 if (notifTitle) {
                     // Writes the DB record and pushes to every device the
-                    // employee has registered, Expo (mobile) and FCM (web).
+                    // employee has registered via Expo.
                     await notifyUser(user.id, {
                         title: notifTitle,
                         body: notifMessage,
@@ -1375,7 +1374,7 @@ exports.createHoliday = async (req, res) => {
         await newHoliday.save();
 
         // Notify all active users - writes the DB record and pushes to
-        // every device each one has registered, Expo (mobile) and FCM (web).
+        // every device each one has registered via Expo.
         try {
             const sDate = new Date(startDate).toLocaleDateString();
             const eDate = new Date(endDate).toLocaleDateString();
@@ -1714,7 +1713,7 @@ exports.createAdminNotification = async (req, res) => {
         recipients = userRecords.map(u => u.id);
 
         // Notify each recipient directly - writes the DB record and pushes
-        // to every device they've registered, Expo (mobile) and FCM (web).
+        // to every device they've registered via Expo.
         await Promise.all(recipients.map(userId => notifyUser(userId, {
             title,
             body: message,
@@ -1741,26 +1740,6 @@ exports.createAdminNotification = async (req, res) => {
 
     } catch (error) {
         console.error("Create Notification Error:", error);
-        res.status(500).json({ message: "Server Error" });
-    }
-};
-
-exports.saveFCMToken = async (req, res) => {
-    try {
-        const { token } = req.body;
-        if (!token) return res.status(400).json({ message: "Token is required" });
-
-
-
-        await User.findOneAndUpdate(
-            { id: req.user.id },
-            { fcmToken: token }, // Using the new field
-            { returnDocument: 'after' }
-        );
-
-        res.json({ message: "FCM Token updated" });
-    } catch (error) {
-        console.error("Save Token Error:", error);
         res.status(500).json({ message: "Server Error" });
     }
 };

@@ -8,11 +8,9 @@ const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
  * EXPO PUSH
  * ============================================================
  *
- * The mobile app registers Expo push tokens. They are delivered
- * through Expo's service rather than Firebase, so this lives
- * beside the FCM path instead of replacing it: browsers keep
- * getting FCM, phones get Expo, and both are sent for a user who
- * has registered on each.
+ * Push is mobile-only. The mobile app registers an Expo push
+ * token, delivered through Expo's own service. Browser push
+ * (Firebase/FCM) has been removed.
  */
 const sendExpoPush = async (tokens, payload) => {
     const valid = [...new Set((tokens || []).filter(
@@ -98,68 +96,10 @@ const expoTokensFor = async (userId) => {
     return (user?.expoPushTokens || []).map((t) => t.token);
 };
 
-/** The same, for Firebase, so browsers are not left out. */
-const sendFcmPush = async (userId, payload, notificationId) => {
-    try {
-        const admin = require('../config/firebase');
-        if (!admin || typeof admin.messaging !== 'function') return;
-
-        let tokens = [];
-
-        if (userId === 'ALL') {
-            const users = await User.find({ status: 'Active' }).select('fcmTokens');
-            tokens = users.flatMap((u) => (u.fcmTokens || []).map((t) => t.token));
-        } else {
-            const user = await User.findOne({ id: userId }).select('fcmTokens');
-            tokens = (user?.fcmTokens || []).map((t) => t.token);
-        }
-
-        const unique = [...new Set(tokens.filter(Boolean))];
-        if (!unique.length) return;
-
-        const response = await admin.messaging().sendEachForMulticast({
-            notification: { title: payload.title, body: payload.body },
-            data: {
-                notificationId: String(notificationId || ''),
-                category: String(payload.category || 'general'),
-                entityId: String(payload.entityId || ''),
-                screen: 'notifications',
-                forceSystem: String(!!payload.forceSystem)
-            },
-            tokens: unique
-        });
-
-        if (response.failureCount > 0) {
-            const bad = [];
-
-            response.responses.forEach((resp, index) => {
-                const code = resp.error?.code;
-
-                if (
-                    code === 'messaging/registration-token-not-registered' ||
-                    code === 'messaging/invalid-registration-token' ||
-                    code === 'messaging/third-party-auth-error'
-                ) {
-                    bad.push(unique[index]);
-                }
-            });
-
-            if (bad.length) {
-                await User.updateMany(
-                    { 'fcmTokens.token': { $in: bad } },
-                    { $pull: { fcmTokens: { token: { $in: bad } } } }
-                );
-            }
-        }
-    } catch (error) {
-        console.error('FCM push send error:', error.message);
-    }
-};
-
 /**
  * Writes the notification to the database, then pushes it to every
- * device that user has registered, browser and phone alike. One
- * call is all a caller needs to notify somebody.
+ * device that user has registered via Expo. One call is all a
+ * caller needs to notify somebody.
  */
 const notifyUser = async (userId, payload) => {
     try {
@@ -197,11 +137,7 @@ const notifyUser = async (userId, payload) => {
         const withId = { ...payload, notificationId: String(record._id) };
 
         const tokens = await expoTokensFor(userId);
-
-        await Promise.all([
-            sendExpoPush(tokens, withId),
-            sendFcmPush(userId, withId, record._id)
-        ]);
+        await sendExpoPush(tokens, withId);
 
         return record;
     } catch (error) {
@@ -224,4 +160,4 @@ const notifyRoles = async (roles, payload) => {
     }
 };
 
-module.exports = { sendExpoPush, sendFcmPush, notifyUser, notifyRoles, expoTokensFor };
+module.exports = { sendExpoPush, notifyUser, notifyRoles, expoTokensFor };

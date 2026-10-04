@@ -7,7 +7,6 @@ dotenv.config();
 
 const { connectDB } = require('./db');
 const compression = require('compression');
-require('./config/firebase'); // Init Firebase Admin
 
 const app = express();
 
