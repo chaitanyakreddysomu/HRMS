@@ -43,6 +43,12 @@ router.post('/policies', adminController.createPolicy);
 router.put('/policies/:id', adminController.updatePolicy);
 router.delete('/policies/:id', adminController.deletePolicy);
 
+// Holiday Management (HR can also manage holidays)
+router.get('/holidays', adminController.getHolidays);
+router.post('/holidays', adminController.createHoliday);
+router.patch('/holidays/:id', adminController.updateHoliday);
+router.delete('/holidays/:id', adminController.deleteHoliday);
+
 // Leave Management
 router.get('/leaves', hrController.getLeaveRequests);
 router.get('/leaves/:id', hrController.getLeaveRequestById);
