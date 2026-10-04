@@ -206,6 +206,13 @@ exports.getDocumentPreview = async (req, res) => {
         const { path } = req.query;
         if (!path) return res.status(400).json({ message: "Path is required" });
 
+        // Documents are stored at `${empId}/...`; an employee may only
+        // preview their own, never another employee's by guessing the path.
+        const empId = req.user.id;
+        if (path !== empId && !path.startsWith(`${empId}/`)) {
+            return res.status(403).json({ message: "Access Denied" });
+        }
+
         const { data, error } = await supabase.storage
             .from('documents')
             .createSignedUrl(path, 60); // 60 seconds validity

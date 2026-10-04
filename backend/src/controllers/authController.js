@@ -119,7 +119,7 @@ exports.refresh = async (req, res) => {
 
 exports.register = async (req, res) => {
     try {
-        const { name, email, password, role, designation, department, phone } = req.body;
+        const { name, email, password, designation, department, phone } = req.body;
 
         const existingUser = await User.findOne({ email });
         if (existingUser) return res.status(400).json({ message: "User already exists" });
@@ -142,7 +142,7 @@ exports.register = async (req, res) => {
             name,
             email,
             password: hashedPassword,
-            role: role || 'EMPLOYEE',
+            role: 'EMPLOYEE',
             designation,
             department,
             phone,

@@ -2,6 +2,7 @@ const router = require('express').Router();
 const adminController = require('../controllers/adminController');
 const logController = require('../controllers/logController');
 const auth = require('../middleware/auth');
+const requireRole = require('../middleware/requireRole');
 const multer = require('multer');
 const Leave = require('../models/Leave');
 const User = require('../models/User');
@@ -9,41 +10,43 @@ const Notification = require('../models/Notification');
 
 const upload = multer({ storage: multer.memoryStorage() });
 
+// Every route under /api/admin is Admin-only.
+router.use(auth, requireRole('ADMIN'));
+
 // Dashboard Routes
-router.get('/dashboard', auth, adminController.getAdminDashboardStats);
+router.get('/dashboard', adminController.getAdminDashboardStats);
 
 // Profile Routes
-router.get('/profile', auth, adminController.getAdminProfile);
-router.patch('/profile/edit', auth, adminController.updateAdminProfile);
-router.post('/profile-image', auth, upload.single('image'), adminController.uploadProfileImage);
-router.get('/bank-details', auth, adminController.getAdminBankDetails);
+router.get('/profile', adminController.getAdminProfile);
+router.patch('/profile/edit', adminController.updateAdminProfile);
+router.post('/profile-image', upload.single('image'), adminController.uploadProfileImage);
+router.get('/bank-details', adminController.getAdminBankDetails);
 
 // Pending Requests Routes
-router.get('/pending-requests', auth, adminController.getPendingRequests);
-router.get('/pending-requests/:id', auth, adminController.getRequestById);
-router.patch('/pending-requests/:id', auth, adminController.updateRequestStatus);
+router.get('/pending-requests', adminController.getPendingRequests);
+router.get('/pending-requests/:id', adminController.getRequestById);
+router.patch('/pending-requests/:id', adminController.updateRequestStatus);
 
 // Employee Management Routes
-router.get('/employees', auth, adminController.getAllEmployees);
-router.post('/employees', auth, adminController.createEmployee);
-router.get('/employees/:id', auth, adminController.getEmployeeById);
-router.put('/employees/:id', auth, adminController.updateEmployee);
-router.get('/employee-bank-details', auth, adminController.getEmployeeBankDetails);
+router.get('/employees', adminController.getAllEmployees);
+router.post('/employees', adminController.createEmployee);
+router.get('/employees/:id', adminController.getEmployeeById);
+router.put('/employees/:id', adminController.updateEmployee);
+router.get('/employee-bank-details', adminController.getEmployeeBankDetails);
 
 // Document Management Routes
-// Document Management Routes
-router.get('/documents', auth, adminController.getAllEmployeeDocuments);
-router.get('/document-preview', auth, adminController.getAdminDocumentPreview);
-router.get('/documents/:id', auth, adminController.getEmployeeDocuments); // :id can be empId
-router.put('/documents/:empId/:docId', auth, adminController.updateDocumentStatus);
+router.get('/documents', adminController.getAllEmployeeDocuments);
+router.get('/document-preview', adminController.getAdminDocumentPreview);
+router.get('/documents/:id', adminController.getEmployeeDocuments); // :id can be empId
+router.put('/documents/:empId/:docId', adminController.updateDocumentStatus);
 
 // Attendance Routes
-router.get('/attendance', auth, adminController.getAttendanceRecords);
+router.get('/attendance', adminController.getAttendanceRecords);
 
 // Leave Management Routes
-router.get('/leaves', auth, adminController.getLeaveRequests);
-router.get('/leaves/:id', auth, adminController.getLeaveRequestById);
-router.put('/leaves/:id', auth, async (req, res) => {
+router.get('/leaves', adminController.getLeaveRequests);
+router.get('/leaves/:id', adminController.getLeaveRequestById);
+router.put('/leaves/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const { status, rejectionReason } = req.body;
@@ -150,49 +153,49 @@ router.put('/leaves/:id', auth, async (req, res) => {
 });
 
 // Holiday Management Routes
-router.get('/holidays', auth, adminController.getHolidays);
-router.post('/holidays', auth, adminController.createHoliday);
-router.patch('/holidays/:id', auth, adminController.updateHoliday);
-router.delete('/holidays/:id', auth, adminController.deleteHoliday);
+router.get('/holidays', adminController.getHolidays);
+router.post('/holidays', adminController.createHoliday);
+router.patch('/holidays/:id', adminController.updateHoliday);
+router.delete('/holidays/:id', adminController.deleteHoliday);
 
 // Policy Management Routes
-router.get('/policies', auth, adminController.getPolicies);
-router.post('/policies', auth, adminController.createPolicy);
-router.put('/policies/:id', auth, adminController.updatePolicy);
-router.delete('/policies/:id', auth, adminController.deletePolicy);
+router.get('/policies', adminController.getPolicies);
+router.post('/policies', adminController.createPolicy);
+router.put('/policies/:id', adminController.updatePolicy);
+router.delete('/policies/:id', adminController.deletePolicy);
 
 // Notification Management Routes
-router.get('/notifications/sent', auth, adminController.getSentNotifications);
-router.get('/notifications', auth, adminController.getAdminNotifications);
-router.post('/notifications', auth, adminController.createAdminNotification);
-router.post('/notifications/fcm-token', auth, adminController.saveFCMToken); // NEW
-router.get('/notifications/:id', auth, adminController.getNotificationById);
-router.patch('/notifications/:id', auth, adminController.updateNotificationStatus);
+router.get('/notifications/sent', adminController.getSentNotifications);
+router.get('/notifications', adminController.getAdminNotifications);
+router.post('/notifications', adminController.createAdminNotification);
+router.post('/notifications/fcm-token', adminController.saveFCMToken); // NEW
+router.get('/notifications/:id', adminController.getNotificationById);
+router.patch('/notifications/:id', adminController.updateNotificationStatus);
 
 // Complaint Management Routes
-router.get('/complaints', auth, adminController.getAdminComplaints);
-router.get('/complaints/:id', auth, adminController.getComplaintById);
-router.patch('/complaints/:id', auth, adminController.updateComplaintStatus);
+router.get('/complaints', adminController.getAdminComplaints);
+router.get('/complaints/:id', adminController.getComplaintById);
+router.patch('/complaints/:id', adminController.updateComplaintStatus);
 
 // Payslip Management Routes
-router.post('/payslips', auth, adminController.createPayslip); // Create and Auto-Calculate
-router.get('/payslips', auth, adminController.getAdminPayslips);
-router.get('/payslips/:id', auth, adminController.getPayslipById);
-router.patch('/payslips/:id', auth, adminController.updatePayslip);
-router.delete('/payslips/:id', auth, adminController.deletePayslip);
-router.get('/payslips/calculate/stats', auth, adminController.calculatePayslipStats); // Helper for frontend
+router.post('/payslips', adminController.createPayslip); // Create and Auto-Calculate
+router.get('/payslips', adminController.getAdminPayslips);
+router.get('/payslips/:id', adminController.getPayslipById);
+router.patch('/payslips/:id', adminController.updatePayslip);
+router.delete('/payslips/:id', adminController.deletePayslip);
+router.get('/payslips/calculate/stats', adminController.calculatePayslipStats); // Helper for frontend
 
 // Salary Structure Routes
-router.get('/salary-structures', auth, adminController.getSalaryStructures);
-router.post('/salary-structures', auth, adminController.createSalaryStructure);
-router.patch('/salary-structures/:id', auth, adminController.updateSalaryStructure);
-router.delete('/salary-structures/:id', auth, adminController.deleteSalaryStructure);
-router.get('/salary-structures/calculate/:empId', auth, adminController.getEmployeeSalaryDetails); // Helper
+router.get('/salary-structures', adminController.getSalaryStructures);
+router.post('/salary-structures', adminController.createSalaryStructure);
+router.patch('/salary-structures/:id', adminController.updateSalaryStructure);
+router.delete('/salary-structures/:id', adminController.deleteSalaryStructure);
+router.get('/salary-structures/calculate/:empId', adminController.getEmployeeSalaryDetails); // Helper
 
 // System Logs
-router.get('/logs', auth, logController.getLogs);
+router.get('/logs', logController.getLogs);
 
 // 2FA Management
-router.get('/users-2fa', auth, adminController.getUsers2FAStatus);
+router.get('/users-2fa', adminController.getUsers2FAStatus);
 
 module.exports = router;
