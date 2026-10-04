@@ -473,72 +473,28 @@ exports.createHRNotification = async (req, res) => {
         recipients = userRecords.map(u => u.id);
         recipients = recipients.filter(id => id !== req.user.id);
 
-        const notifications = recipients.map(userId => ({
+        // Notify each recipient directly - writes the DB record and pushes
+        // to every device they've registered, Expo (mobile) and FCM (web).
+        await Promise.all(recipients.map(userId => notifyUser(userId, {
             title,
-            message,
-            to: userId,
+            body: message,
             source: 'HR',
             type: type || 'info',
-            date: new Date()
-        }));
+            category: 'broadcast'
+        })));
 
         // NOTIFY ADMIN AS WELL
         const admins = await User.find({ role: 'ADMIN', status: 'Active' });
-        const adminNotifications = admins.map(admin => ({
+
+        await Promise.all(admins.map(admin => notifyUser(admin.id, {
             title: `HR Broadcast: ${title}`,
-            message: `HR sent a broadcast to ${notifications.length} recipients: "${message}"`,
-            to: admin.id,
+            body: `HR sent a broadcast to ${recipients.length} recipients: "${message}"`,
             source: 'HR',
             type: 'info',
-            date: new Date()
-        }));
+            category: 'broadcast'
+        })));
 
-        notifications.push(...adminNotifications);
-
-        if (notifications.length > 0) {
-            await Notification.insertMany(notifications);
-        }
-
-        const tokens = [];
-        userRecords.forEach(u => {
-            if (u.fcmTokens && u.fcmTokens.length > 0) {
-                u.fcmTokens.forEach(t => tokens.push(t.token));
-            } else if (u.fcmToken) {
-                tokens.push(u.fcmToken);
-            }
-        });
-
-        // Add Admin Tokens
-        admins.forEach(a => {
-            if (a.fcmTokens && a.fcmTokens.length > 0) {
-                a.fcmTokens.forEach(t => tokens.push(t.token));
-            } else if (a.fcmToken) {
-                tokens.push(a.fcmToken);
-            }
-        });
-
-        const uniqueTokens = [...new Set(tokens.filter(t => t && t.length > 0))];
-
-        if (uniqueTokens.length > 0) {
-            const payload = {
-                notification: {
-                    title: title,
-                    body: message
-                },
-                tokens: uniqueTokens
-            };
-
-            try {
-                const admin = require('../config/firebase');
-                if (admin && admin.messaging) {
-                    await admin.messaging().sendEachForMulticast(payload);
-                }
-            } catch (fcmError) {
-                console.error("HR FCM Error:", fcmError);
-            }
-        }
-
-        res.status(201).json({ message: `Sent to ${notifications.length} employees` });
+        res.status(201).json({ message: `Sent to ${recipients.length} employees` });
 
         // Log the action
         await logger.logAction(
@@ -939,48 +895,15 @@ exports.updateLeaveStatus = async (req, res) => {
                 }
 
                 if (notifTitle) {
-                    console.log(`[HRLeaveNotification] Sending '${notifTitle}' to User ID: ${user.id}`);
-
-                    await Notification.create({
+                    // Writes the DB record and pushes to every device the
+                    // employee has registered, Expo (mobile) and FCM (web).
+                    await notifyUser(user.id, {
                         title: notifTitle,
-                        message: notifMessage,
-                        to: user.id,
+                        body: notifMessage,
                         source: 'HR',
                         type: notifType,
-                        date: new Date()
+                        category: 'leave'
                     });
-
-                    const tokens = [];
-                    if (user.fcmTokens && user.fcmTokens.length > 0) {
-                        user.fcmTokens.forEach(t => { if (t.token) tokens.push(t.token) });
-                    }
-                    if (tokens.length === 0 && user.fcmToken) {
-                        tokens.push(user.fcmToken);
-                    }
-
-                    const uniqueTokens = [...new Set(tokens.filter(t => t && t.length > 0))];
-
-                    if (uniqueTokens.length === 0) {
-                        console.log(`[HRLeaveNotification] No FCM tokens found for User ID: ${user.id}`);
-                    }
-
-                    if (uniqueTokens.length > 0) {
-                        const admin = require('../config/firebase');
-                        if (admin && typeof admin.messaging === 'function') {
-                            const response = await admin.messaging().sendEachForMulticast({
-                                notification: { title: notifTitle, body: notifMessage },
-                                tokens: uniqueTokens
-                            });
-                            console.log(`[HRLeaveNotification] FCM Sent: ${response.successCount} success, ${response.failureCount} failure`);
-                            if (response.failureCount > 0) {
-                                response.responses.forEach((resp, idx) => {
-                                    if (!resp.success) {
-                                        console.error(`[HRLeaveNotification] Failure for token index ${idx}:`, JSON.stringify(resp.error, null, 2));
-                                    }
-                                });
-                            }
-                        }
-                    }
                 }
             }
         } catch (notifErr) {

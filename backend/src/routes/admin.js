@@ -6,7 +6,7 @@ const requireRole = require('../middleware/requireRole');
 const multer = require('multer');
 const Leave = require('../models/Leave');
 const User = require('../models/User');
-const Notification = require('../models/Notification');
+const { notifyUser } = require('../utils/push');
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -82,63 +82,15 @@ router.put('/leaves/:id', async (req, res) => {
                 }
 
                 if (notifTitle) {
-                    // Log intention
-                    console.log(`[AdminLeaveNotification] Status Update: ${status} for User: ${user.id}`);
-
-                    // Create Notification
-                    await Notification.create({
+                    // Writes the DB record and pushes to every device the
+                    // employee has registered, Expo (mobile) and FCM (web).
+                    await notifyUser(user.id, {
                         title: notifTitle,
-                        message: notifMessage,
-                        to: user.id,
+                        body: notifMessage,
                         source: 'ADMIN',
                         type: notifType,
-                        date: new Date()
+                        category: 'leave'
                     });
-
-                    // Send FCM
-                    const tokens = [];
-                    if (user.fcmTokens && user.fcmTokens.length > 0) {
-                        user.fcmTokens.forEach(t => {
-                            if (t.token) tokens.push(t.token);
-                        });
-                    }
-                    // REMOVED LEGACY fcmToken fallback
-
-                    const uniqueTokens = [...new Set(tokens.filter(t => t))];
-
-                    if (uniqueTokens.length > 0) {
-                        const adminInfo = require('../config/firebase'); // Avoid name clash
-                        if (adminInfo.messaging) {
-                            const response = await adminInfo.messaging().sendEachForMulticast({
-                                notification: { title: notifTitle, body: notifMessage },
-                                tokens: uniqueTokens
-                            });
-                            console.log(`[AdminLeaveNotification] Sent to ${user.id}: ${response.successCount} success, ${response.failureCount} failure`);
-
-                            if (response.failureCount > 0) {
-                                response.responses.forEach(async (resp, idx) => {
-                                    if (!resp.success) {
-                                        const error = resp.error;
-                                        const badToken = uniqueTokens[idx];
-                                        console.error(`[AdminLeaveNotification] Failure for token index ${idx} (${badToken ? badToken.substring(0, 10) + '...' : 'unknown'}):`, error);
-
-                                        if (
-                                            error.code === 'messaging/registration-token-not-registered' ||
-                                            error.code === 'messaging/invalid-registration-token' ||
-                                            error.code === 'messaging/third-party-auth-error'
-                                        ) {
-                                            await User.updateOne(
-                                                { id: leave.userId },
-                                                { $pull: { fcmTokens: { token: badToken } } }
-                                            );
-                                        }
-                                    }
-                                });
-                            }
-                        }
-                    } else {
-                        console.log(`[AdminLeaveNotification] No FCM tokens found for user ${user.id}. Skipping push.`);
-                    }
                 }
             }
         } catch (nErr) {

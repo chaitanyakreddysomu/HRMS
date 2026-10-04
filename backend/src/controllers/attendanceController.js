@@ -1,15 +1,8 @@
 const Attendance = require('../models/Attendance');
+const { getISTParts, istTimeString, istTodayRange, istTimeStringToUTC, istToUTC } = require('../utils/istTime');
 
-
-
-// Helper to get start and end of today
-const getTodayRange = () => {
-    const start = new Date();
-    start.setHours(0, 0, 0, 0);
-    const end = new Date();
-    end.setHours(23, 59, 59, 999);
-    return { start, end };
-};
+// Helper to get start and end of today, as an IST calendar day
+const getTodayRange = () => istTodayRange();
 
 exports.punchIn = async (req, res) => {
     try {
@@ -26,16 +19,15 @@ exports.punchIn = async (req, res) => {
         }
 
         const now = new Date();
-        const hour = now.getHours();
-        const minute = now.getMinutes();
+        const { hour, minute } = getISTParts(now);
 
-        // Determine status (Late if after 9:30 AM)
+        // Determine status (Late if after 9:30 AM IST)
         let status = 'Present';
         if (hour > 9 || (hour === 9 && minute > 30)) {
             status = 'Late';
         }
 
-        const punchInTime = now.toTimeString().split(' ')[0]; // HH:MM:SS
+        const punchInTime = istTimeString(now); // HH:MM:SS, IST
 
         const record = new Attendance({
             userId: req.user.id,
@@ -69,14 +61,11 @@ exports.punchOut = async (req, res) => {
         }
 
         const now = new Date();
-        const punchOutTime = now.toTimeString().split(' ')[0];
+        const punchOutTime = istTimeString(now);
 
         // Calculate total hours
-        const [inH, inM, inS] = record.punchIn.split(':').map(Number);
-        const [outH, outM, outS] = punchOutTime.split(':').map(Number);
-
-        const inDate = new Date(); inDate.setHours(inH, inM, inS);
-        const outDate = new Date(); outDate.setHours(outH, outM, outS);
+        const inDate = istTimeStringToUTC(record.punchIn, now);
+        const outDate = istTimeStringToUTC(punchOutTime, now);
 
         const diffMs = outDate - inDate;
         const totalHours = diffMs / (1000 * 60 * 60);
@@ -120,23 +109,20 @@ exports.getStats = async (req, res) => {
         let todayHours = 0;
         if (todayRecord && todayRecord.punchIn && !todayRecord.punchOut) {
             // Live calculation if punch in but not out
-            const [h, m, s] = todayRecord.punchIn.split(':').map(Number);
-            const inTime = new Date(); inTime.setHours(h, m, s);
+            const inTime = istTimeStringToUTC(todayRecord.punchIn, now);
             const diffMs = now - inTime;
             todayHours = diffMs / (1000 * 60 * 60);
         } else if (todayRecord) {
             todayHours = todayRecord.totalHours || 0;
         }
 
-        // WEEK (Start form last Monday)
-        const startOfWeek = new Date(now);
-        const day = startOfWeek.getDay(); // 0 (Sun) to 6 (Sat)
-        const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
-        startOfWeek.setDate(diff);
-        startOfWeek.setHours(0, 0, 0, 0);
+        // WEEK (start from last Monday, in IST) and MONTH, both as real UTC instants
+        const { year, month, day } = getISTParts(now);
+        const dayOfWeek = new Date(Date.UTC(year, month - 1, day)).getUTCDay(); // 0 (Sun) to 6 (Sat)
+        const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
 
-        // MONTH
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const startOfWeek = istToUTC(year, month, day + mondayOffset);
+        const startOfMonth = istToUTC(year, month, 1);
 
         // Aggregation for Week and Month
         const stats = await Attendance.aggregate([
@@ -199,17 +185,18 @@ exports.getAttendance = async (req, res) => {
         // Month filter (0-11) and Year
         if (req.query.month && req.query.year) {
             const year = parseInt(req.query.year);
-            const month = parseInt(req.query.month); // 0-indexed assumed from frontend
+            const month = parseInt(req.query.month); // 0-indexed assumed from frontend, in IST
 
-            const start = new Date(year, month, 1);
-            const end = new Date(year, month + 1, 0, 23, 59, 59);
+            const start = istToUTC(year, month + 1, 1);
+            const nextMonthStart = istToUTC(year, month + 2, 1);
 
-            query.date = { $gte: start, $lte: end };
+            query.date = { $gte: start, $lt: nextMonthStart };
         } else if (req.query.date) {
-            const d = new Date(req.query.date);
-            const nextDay = new Date(d);
-            nextDay.setDate(d.getDate() + 1);
-            query.date = { $gte: d, $lt: nextDay };
+            // "YYYY-MM-DD" is an IST calendar day, not a UTC one
+            const [y, m, day] = String(req.query.date).split('-').map(Number);
+            const start = istToUTC(y, m, day);
+            const nextDay = istToUTC(y, m, day + 1);
+            query.date = { $gte: start, $lt: nextDay };
         }
 
         const records = await Attendance.find(query).sort({ date: -1 });

@@ -141,7 +141,9 @@ exports.updateLeaveStatus = async (req, res) => {
 
                 if (notifTitle) {
                     // Writes the record and pushes it to every device
-                    // this person has, phone and browser alike
+                    // this person has, phone and browser alike. (Also
+                    // handles dropping any FCM token Firebase rejects -
+                    // no need to duplicate that here.)
                     await notifyUser(user.id, {
                         title: notifTitle,
                         body: notifMessage,
@@ -150,50 +152,6 @@ exports.updateLeaveStatus = async (req, res) => {
                         category: 'leave',
                         entityId: leave._id
                     });
-
-                    // 2. FCM Notification
-                    const tokens = [];
-                    if (user.fcmTokens && user.fcmTokens.length > 0) {
-                        user.fcmTokens.forEach(t => { if (t.token) tokens.push(t.token) });
-                    }
-
-                    const uniqueTokens = [...new Set(tokens.filter(t => t && t.length > 0))];
-
-                    if (uniqueTokens.length > 0) {
-                        const admin = require('../config/firebase');
-                        if (admin && typeof admin.messaging === 'function') {
-                            const response = await admin.messaging().sendEachForMulticast({
-                                notification: { title: notifTitle, body: notifMessage },
-                                tokens: uniqueTokens
-                            });
-                            console.log(`[LeaveController] FCM Sent: ${response.successCount} success, ${response.failureCount} failure`);
-                            if (response.failureCount > 0) {
-                                response.responses.forEach(async (resp, idx) => {
-                                    if (!resp.success) {
-                                        const error = resp.error;
-                                        const badToken = uniqueTokens[idx];
-                                        console.error(`[LeaveController] Failure for token index ${idx}:`, error);
-
-                                        if (
-                                            error.code === 'messaging/registration-token-not-registered' ||
-                                            error.code === 'messaging/invalid-registration-token' ||
-                                            error.code === 'messaging/third-party-auth-error'
-                                        ) {
-                                            console.log(`[LeaveController] Removing bad token: ${badToken}`);
-                                            try {
-                                                await User.updateOne(
-                                                    { id: leave.userId },
-                                                    { $pull: { fcmTokens: { token: badToken } } }
-                                                );
-                                            } catch (dbErr) {
-                                                console.error("[LeaveController] Failed to remove bad token:", dbErr);
-                                            }
-                                        }
-                                    }
-                                });
-                            }
-                        }
-                    }
                 }
             }
         } catch (notifErr) {

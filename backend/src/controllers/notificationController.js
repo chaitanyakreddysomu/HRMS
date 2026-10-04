@@ -177,56 +177,19 @@ exports.subscribe = async (req, res) => {
     }
 };
 
-// Helper to send push
+// Helper to send push - push only, callers write their own Notification
+// record. Sends to every device the user has registered, Expo (mobile)
+// and FCM (web) alike; userId 'ALL' broadcasts to every active user.
 exports.sendPushToUser = async (userId, payload) => {
     try {
-        const admin = require('../config/firebase');
-        if (!admin || !admin.messaging) return;
+        const { sendExpoPush, sendFcmPush, expoTokensFor } = require('../utils/push');
 
-        let tokens = [];
+        const tokens = await expoTokensFor(userId);
 
-        if (userId === 'ALL') {
-            const users = await User.find({ status: 'Active' });
-            for (const u of users) {
-                if (u.fcmTokens) u.fcmTokens.forEach(t => tokens.push(t.token));
-            }
-        } else {
-            const user = await User.findOne({ id: userId });
-            if (user && user.fcmTokens) {
-                user.fcmTokens.forEach(t => tokens.push(t.token));
-            }
-        }
-
-        const uniqueTokens = [...new Set(tokens)];
-
-        if (uniqueTokens.length > 0) {
-            const response = await admin.messaging().sendEachForMulticast({
-                notification: {
-                    title: payload.title,
-                    body: payload.body
-                },
-                tokens: uniqueTokens
-            });
-
-            if (response.failureCount > 0) {
-                response.responses.forEach(async (resp, idx) => {
-                    if (!resp.success) {
-                        const error = resp.error;
-                        const badToken = uniqueTokens[idx];
-                        if (
-                            error.code === 'messaging/registration-token-not-registered' ||
-                            error.code === 'messaging/invalid-registration-token' ||
-                            error.code === 'messaging/third-party-auth-error'
-                        ) {
-                            await User.updateMany(
-                                { "fcmTokens.token": badToken },
-                                { $pull: { fcmTokens: { token: badToken } } }
-                            );
-                        }
-                    }
-                });
-            }
-        }
+        await Promise.all([
+            sendExpoPush(tokens, payload),
+            sendFcmPush(userId, payload)
+        ]);
     } catch (e) {
         console.error("Send Push Logic Error:", e);
     }

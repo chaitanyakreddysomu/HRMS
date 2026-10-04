@@ -12,6 +12,7 @@ const SalaryStructure = require('../models/SalaryStructure');
 const Referral = require('../models/Referral');
 const logger = require('../utils/logger');
 const bcrypt = require('bcryptjs');
+const { notifyUser, notifyRoles } = require('../utils/push');
 
 exports.getAdminDashboardStats = async (req, res) => {
     try {
@@ -640,43 +641,16 @@ exports.updatePayslip = async (req, res) => {
                     }
 
                     if (notifTitle) {
-                        // 1. Create DB Notification
-                        await Notification.create({
+                        // Writes the DB record and pushes to every device
+                        // the employee has registered, Expo (mobile) and
+                        // FCM (web) alike.
+                        await notifyUser(user.id, {
                             title: notifTitle,
-                            message: notifMessage,
-                            to: user.id,
+                            body: notifMessage,
                             source: 'SYSTEM',
-                            type: status === 'Paid' ? 'success' : 'info'
+                            type: status === 'Paid' ? 'success' : 'info',
+                            category: 'payslip'
                         });
-
-                        // 2. Send FCM Push Notification
-                        const tokens = [];
-                        if (user.fcmTokens && user.fcmTokens.length > 0) {
-                            user.fcmTokens.forEach(t => tokens.push(t.token));
-                        } else if (user.fcmToken) {
-                            tokens.push(user.fcmToken);
-                        }
-
-                        const uniqueTokens = [...new Set(tokens.filter(t => t && t.length > 0))];
-
-                        if (uniqueTokens.length > 0) {
-                            try {
-                                const admin = require('../config/firebase');
-                                // Ensure admin is initialized and check messaging
-                                if (admin && admin.messaging) {
-                                    // Validate token format briefly or just send
-                                    await admin.messaging().sendEachForMulticast({
-                                        notification: {
-                                            title: notifTitle,
-                                            body: notifMessage
-                                        },
-                                        tokens: uniqueTokens
-                                    });
-                                }
-                            } catch (fcmError) {
-                                console.error("FCM Error (Payslip):", fcmError);
-                            }
-                        }
                     }
                 }
             }
@@ -1016,64 +990,15 @@ exports.updateDocumentStatus = async (req, res) => {
                 }
 
                 if (notifTitle) {
-                    console.log(`[DocumentNotification] Sending '${notifTitle}' to User ID: ${user.id}`);
-
-                    // 1. DB Notification
-                    await Notification.create({
+                    // Writes the DB record and pushes to every device the
+                    // employee has registered, Expo (mobile) and FCM (web).
+                    await notifyUser(user.id, {
                         title: notifTitle,
-                        message: notifMessage,
-                        to: user.id,
+                        body: notifMessage,
                         source: 'ADMIN',
-                        type: notifType
+                        type: notifType,
+                        category: 'document'
                     });
-
-                    // 2. Push Notification
-                    const tokens = [];
-                    // Prioritize Multi-device tokens
-                    if (user.fcmTokens && user.fcmTokens.length > 0) {
-                        user.fcmTokens.forEach(t => {
-                            if (t.token) tokens.push(t.token)
-                        });
-                        console.log(`[DocumentNotification] Found ${tokens.length} tokens in fcmTokens array`);
-                    }
-
-                    // Fallback to legacy single token if no array tokens found
-                    if (tokens.length === 0 && user.fcmToken) {
-                        tokens.push(user.fcmToken);
-                        console.log(`[DocumentNotification] Using legacy fcmToken`);
-                    }
-
-                    const uniqueTokens = [...new Set(tokens.filter(t => t && t.length > 0))];
-
-                    if (uniqueTokens.length > 0) {
-                        try {
-                            const admin = require('../config/firebase');
-                            // Check if admin is initialized properly (function vs object)
-                            if (admin && typeof admin.messaging === 'function') {
-                                const response = await admin.messaging().sendEachForMulticast({
-                                    notification: {
-                                        title: notifTitle,
-                                        body: notifMessage
-                                    },
-                                    tokens: uniqueTokens
-                                });
-                                console.log(`[DocumentNotification] FCM Sent: ${response.successCount} success, ${response.failureCount} failure`);
-                                if (response.failureCount > 0) {
-                                    response.responses.forEach((resp, idx) => {
-                                        if (!resp.success) {
-                                            console.error(`[FCM Failure] Token: ${uniqueTokens[idx]} - Error: ${resp.error}`);
-                                        }
-                                    });
-                                }
-                            } else {
-                                console.warn("[DocumentNotification] Firebase Admin not initialized correctly or missing credentials.");
-                            }
-                        } catch (fcmError) {
-                            console.error("[DocumentNotification] FCM Execution Error:", fcmError);
-                        }
-                    } else {
-                        console.log("[DocumentNotification] No valid FCM tokens found for user.");
-                    }
                 }
             } else {
                 console.warn(`[DocumentNotification] User ${doc.empId} not found, cannot send notification.`);
@@ -1377,58 +1302,15 @@ exports.updateLeaveStatus = async (req, res) => {
                 }
 
                 if (notifTitle) {
-                    console.log(`[LeaveNotification] Sending '${notifTitle}' to User ID: ${user.id}`);
-
-                    // 1. Create DB Notification
-                    await Notification.create({
+                    // Writes the DB record and pushes to every device the
+                    // employee has registered, Expo (mobile) and FCM (web).
+                    await notifyUser(user.id, {
                         title: notifTitle,
-                        message: notifMessage,
-                        to: user.id,
-                        source: 'ADMIN', // or SYSTEM
+                        body: notifMessage,
+                        source: 'ADMIN',
                         type: notifType,
-                        date: new Date()
+                        category: 'leave'
                     });
-
-                    // 2. Send Push Notification
-                    const tokens = [];
-                    // Prioritize Multi-device tokens
-                    if (user.fcmTokens && user.fcmTokens.length > 0) {
-                        user.fcmTokens.forEach(t => {
-                            if (t.token) tokens.push(t.token)
-                        });
-                        console.log(`[LeaveNotification] Found ${tokens.length} tokens in fcmTokens array`);
-                    }
-
-                    // Fallback to legacy single token
-                    if (tokens.length === 0 && user.fcmToken) {
-                        tokens.push(user.fcmToken);
-                        console.log(`[LeaveNotification] Using legacy fcmToken`);
-                    }
-
-                    const uniqueTokens = [...new Set(tokens.filter(t => t && t.length > 0))];
-
-                    if (uniqueTokens.length > 0) {
-                        try {
-                            const admin = require('../config/firebase');
-                            // Check if admin is initialized properly
-                            if (admin && typeof admin.messaging === 'function') {
-                                const response = await admin.messaging().sendEachForMulticast({
-                                    notification: {
-                                        title: notifTitle,
-                                        body: notifMessage
-                                    },
-                                    tokens: uniqueTokens
-                                });
-                                console.log(`[LeaveNotification] FCM Sent: ${response.successCount} success, ${response.failureCount} failure`);
-                            } else {
-                                console.warn("[LeaveNotification] Firebase Admin not initialized correctly.");
-                            }
-                        } catch (fcmError) {
-                            console.error("[LeaveNotification] FCM Error:", fcmError);
-                        }
-                    } else {
-                        console.log("[LeaveNotification] No valid FCM tokens found for user.");
-                    }
                 }
             }
         } catch (notifErr) {
@@ -1492,64 +1374,24 @@ exports.createHoliday = async (req, res) => {
         });
         await newHoliday.save();
 
-        // Notify all active users
+        // Notify all active users - writes the DB record and pushes to
+        // every device each one has registered, Expo (mobile) and FCM (web).
         try {
-            const activeUsers = await User.find({ status: 'Active' }); // Need fcmToken so remove select('id') or select id and fcmToken
-            if (activeUsers.length > 0) {
-                const sDate = new Date(startDate).toLocaleDateString();
-                const eDate = new Date(endDate).toLocaleDateString();
-                const notificationTitle = "New Holiday Added";
+            const sDate = new Date(startDate).toLocaleDateString();
+            const eDate = new Date(endDate).toLocaleDateString();
+            const notificationTitle = "New Holiday Added";
 
-                let notificationMessage;
-                if (sDate === eDate) {
-                    notificationMessage = `A new holiday '${name}' has been added to the calendar on ${sDate}.`;
-                } else {
-                    notificationMessage = `A new holiday '${name}' has been added to the calendar from ${sDate} to ${eDate}.`;
-                }
+            const notificationMessage = sDate === eDate
+                ? `A new holiday '${name}' has been added to the calendar on ${sDate}.`
+                : `A new holiday '${name}' has been added to the calendar from ${sDate} to ${eDate}.`;
 
-                const notifications = activeUsers.map(u => ({
-                    title: notificationTitle,
-                    message: notificationMessage,
-                    to: u.id,
-                    source: "SYSTEM",
-                    type: "info",
-                    date: new Date()
-                }));
-
-                await Notification.insertMany(notifications);
-
-                // SEND PUSH NOTIFICATION (FCM)
-                const tokens = activeUsers
-                    .map(u => u.fcmToken)
-                    .filter(token => token && token.length > 0);
-
-
-
-                if (tokens.length > 0) {
-                    const payload = {
-                        notification: {
-                            title: notificationTitle,
-                            body: notificationMessage
-                        },
-                        tokens: tokens
-                    };
-
-                    try {
-                        const admin = require('../config/firebase');
-                        // Check if admin is initialized
-                        if (admin && admin.messaging) {
-                            // sendMulticast was removed in v13, use sendEachForMulticast
-                            await admin.messaging().sendEachForMulticast(payload);
-                        } else {
-                            console.error('[CreateHoliday] Firebase Admin not initialized correctly.');
-                        }
-                    } catch (fcmError) {
-                        console.error("[CreateHoliday] FCM Send Error:", fcmError);
-                    }
-                } else {
-                    console.warn("[CreateHoliday] No FCM tokens found. Users need to visit the app to register tokens.");
-                }
-            }
+            await notifyRoles(['ADMIN', 'HR', 'EMPLOYEE'], {
+                title: notificationTitle,
+                body: notificationMessage,
+                source: 'SYSTEM',
+                type: 'info',
+                category: 'holiday'
+            });
         } catch (notifError) {
             console.error("Failed to send holiday notifications:", notifError);
             // Don't fail the request if notifications fail, simply log it.
@@ -1871,104 +1713,31 @@ exports.createAdminNotification = async (req, res) => {
 
         recipients = userRecords.map(u => u.id);
 
-        // Create a notification for each recipient (DB)
-        const notifications = recipients.map(userId => ({
+        // Notify each recipient directly - writes the DB record and pushes
+        // to every device they've registered, Expo (mobile) and FCM (web).
+        await Promise.all(recipients.map(userId => notifyUser(userId, {
             title,
-            message,
-            to: userId,
+            body: message,
             source: 'ADMIN',
             type: type || 'info',
-            date: new Date()
-        }));
+            category: 'broadcast'
+        })));
 
-        if (notifications.length > 0) {
-            await Notification.insertMany(notifications);
-        }
-
-        // NOTIFY HRs AS WELL (Shadow Notification)
+        // NOTIFY HRs AS WELL (Shadow Notification), for any HR not already a recipient
         const hrs = await User.find({ role: 'HR', status: 'Active' });
-        const hrNotifications = [];
+        const shadowHrIds = hrs
+            .filter(hr => !userRecords.find(u => u.id === hr.id) && hr.id !== req.user.id)
+            .map(hr => hr.id);
 
-        hrs.forEach(hr => {
-            // Check if HR is already in the main recipient list
-            const isRecipient = userRecords.find(u => u.id === hr.id);
-            if (!isRecipient && hr.id !== req.user.id) {
-                hrNotifications.push({
-                    title: `Admin Broadcast: ${title}`,
-                    message: `Admin sent a broadcast to ${notifications.length} recipients: "${message}"`,
-                    to: hr.id,
-                    source: 'ADMIN',
-                    type: 'info',
-                    date: new Date()
-                });
-            }
-        });
+        await Promise.all(shadowHrIds.map(hrId => notifyUser(hrId, {
+            title: `Admin Broadcast: ${title}`,
+            body: `Admin sent a broadcast to ${recipients.length} recipients: "${message}"`,
+            source: 'ADMIN',
+            type: 'info',
+            category: 'broadcast'
+        })));
 
-        if (hrNotifications.length > 0) {
-            await Notification.insertMany(hrNotifications);
-        }
-
-        // SEND PUSH NOTIFICATION (FCM)
-        const tokens = [];
-
-        // 1. Recipient Tokens
-        userRecords.forEach(u => {
-            if (u.fcmTokens && u.fcmTokens.length > 0) {
-                u.fcmTokens.forEach(t => tokens.push(t.token));
-            } else if (u.fcmToken) {
-                tokens.push(u.fcmToken);
-            }
-        });
-
-        // 2. HR Tokens (for shadow notifications or if they are recipients)
-        // Note: If HR was a recipient, their token is already added above.
-        // We only need to add tokens for HRs who were NOT recipients but got the shadow notification.
-        hrs.forEach(hr => {
-            const isRecipient = userRecords.find(u => u.id === hr.id);
-            if (!isRecipient && hr.id !== req.user.id) {
-                if (hr.fcmTokens && hr.fcmTokens.length > 0) {
-                    hr.fcmTokens.forEach(t => tokens.push(t.token));
-                } else if (hr.fcmToken) {
-                    tokens.push(hr.fcmToken);
-                }
-            }
-        });
-
-        const uniqueTokens = [...new Set(tokens.filter(token => token && token.length > 0))];
-
-        if (uniqueTokens.length > 0) {
-            const payload = {
-                notification: {
-                    title: title,
-                    body: message
-                },
-                tokens: tokens // Multicast
-            };
-
-            try {
-                // We import admin lazily or check if it's available
-                const admin = require('../config/firebase'); // Assuming this exports initialized admin
-                if (admin.messaging) {
-                    const response = await admin.messaging().sendMulticast(payload);
-                    console.log('Successfully sent message:', response);
-                    if (response.failureCount > 0) {
-                        const failedTokens = [];
-                        response.responses.forEach((resp, idx) => {
-                            if (!resp.success) {
-                                failedTokens.push(tokens[idx]);
-                            }
-                        });
-                        console.log('List of tokens that caused failures: ' + failedTokens);
-                        // TODO: Remove invalid tokens from DB if needed
-                    }
-                }
-            } catch (fcmError) {
-                console.error("FCM Send Error:", fcmError);
-                // Don't fail the request if push fails, just log it
-            }
-        }
-
-        res.status(201).json({ message: `Sent to ${notifications.length} recipients` });
+        res.status(201).json({ message: `Sent to ${recipients.length} recipients` });
 
     } catch (error) {
         console.error("Create Notification Error:", error);
