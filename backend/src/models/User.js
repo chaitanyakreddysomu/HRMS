@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { encrypt, encryptBankDetails, decryptBankDetails, BANK_FIELDS } = require('../utils/bankCrypto');
 
 const userSchema = new mongoose.Schema({
     id: { type: String, required: true, unique: true }, // e.g. EMP001
@@ -66,5 +67,51 @@ userSchema.index({ role: 1 });
 userSchema.index({ status: 1 });
 userSchema.index({ department: 1 });
 userSchema.index({ projectStatus: 1 });
+
+// bankDetails is encrypted at rest (AES-256-GCM, see utils/bankCrypto.js).
+// These hooks encrypt on every write path and decrypt on every read path
+// so no controller needs to know the fields are encrypted in the DB.
+
+function decryptDoc(doc) {
+    if (doc && doc.bankDetails) decryptBankDetails(doc.bankDetails);
+}
+
+userSchema.pre('save', function () {
+    if (this.isModified('bankDetails') && this.bankDetails) {
+        const plain = typeof this.bankDetails.toObject === 'function'
+            ? this.bankDetails.toObject()
+            : this.bankDetails;
+        this.bankDetails = encryptBankDetails(plain);
+    }
+});
+
+userSchema.pre(['findOneAndUpdate', 'updateOne', 'updateMany'], function () {
+    const update = this.getUpdate();
+    if (!update) return;
+
+    if (update.bankDetails) {
+        update.bankDetails = encryptBankDetails(update.bankDetails);
+    }
+    if (update.$set) {
+        if (update.$set.bankDetails) {
+            update.$set.bankDetails = encryptBankDetails(update.$set.bankDetails);
+        }
+        // Dot-notation partial updates, e.g. { $set: { 'bankDetails.accountNumber': '...' } }
+        for (const field of BANK_FIELDS) {
+            const dotKey = `bankDetails.${field}`;
+            if (update.$set[dotKey] !== undefined) {
+                update.$set[dotKey] = encrypt(update.$set[dotKey]);
+            }
+        }
+    }
+});
+
+userSchema.post('find', function (docs) {
+    if (Array.isArray(docs)) docs.forEach(decryptDoc);
+});
+
+userSchema.post(['findOne', 'findOneAndUpdate'], function (doc) {
+    decryptDoc(doc);
+});
 
 module.exports = mongoose.model('User', userSchema);

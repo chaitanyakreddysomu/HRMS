@@ -1618,14 +1618,13 @@ exports.getEmployeeBankDetails = async (req, res) => {
         }
 
         // 4. Search
+        // bankDetails.* is encrypted at rest (see utils/bankCrypto.js), so it
+        // can no longer be matched with a substring regex — search name/id/email only.
         if (search) {
             query.$or = [
                 { name: { $regex: search, $options: 'i' } },
                 { id: { $regex: search, $options: 'i' } },
-                { email: { $regex: search, $options: 'i' } },
-                { 'bankDetails.bankName': { $regex: search, $options: 'i' } },
-                { 'bankDetails.holderName': { $regex: search, $options: 'i' } },
-                { 'bankDetails.accountNumber': { $regex: search, $options: 'i' } }
+                { email: { $regex: search, $options: 'i' } }
             ];
         }
 
