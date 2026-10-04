@@ -342,11 +342,12 @@ exports.getPendingRequests = async (req, res) => {
         const { search, role } = req.query;
         let query = { status: 'Pending' };
 
+        // phone is encrypted at rest (see utils/bankCrypto.js), so it can
+        // no longer be matched with a substring regex.
         if (search) {
             query.$or = [
                 { name: { $regex: search, $options: 'i' } },
-                { email: { $regex: search, $options: 'i' } },
-                { phone: { $regex: search, $options: 'i' } }
+                { email: { $regex: search, $options: 'i' } }
             ];
         }
 

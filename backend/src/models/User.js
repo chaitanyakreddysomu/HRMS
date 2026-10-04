@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const { encrypt, encryptBankDetails, decryptBankDetails, BANK_FIELDS } = require('../utils/bankCrypto');
+const { encrypt, decrypt, encryptBankDetails, decryptBankDetails, BANK_FIELDS } = require('../utils/bankCrypto');
 
 const userSchema = new mongoose.Schema({
     id: { type: String, required: true, unique: true }, // e.g. EMP001
@@ -68,12 +68,18 @@ userSchema.index({ status: 1 });
 userSchema.index({ department: 1 });
 userSchema.index({ projectStatus: 1 });
 
-// bankDetails is encrypted at rest (AES-256-GCM, see utils/bankCrypto.js).
-// These hooks encrypt on every write path and decrypt on every read path
-// so no controller needs to know the fields are encrypted in the DB.
+// bankDetails, phone, and emergencyContact.phone are encrypted at rest
+// (AES-256-GCM, see utils/bankCrypto.js). These hooks encrypt on every
+// write path and decrypt on every read path so no controller needs to
+// know the fields are encrypted in the DB.
 
 function decryptDoc(doc) {
-    if (doc && doc.bankDetails) decryptBankDetails(doc.bankDetails);
+    if (!doc) return;
+    if (doc.bankDetails) decryptBankDetails(doc.bankDetails);
+    if (doc.phone) doc.phone = decrypt(doc.phone);
+    if (doc.emergencyContact && doc.emergencyContact.phone) {
+        doc.emergencyContact.phone = decrypt(doc.emergencyContact.phone);
+    }
 }
 
 userSchema.pre('save', function () {
@@ -82,6 +88,12 @@ userSchema.pre('save', function () {
             ? this.bankDetails.toObject()
             : this.bankDetails;
         this.bankDetails = encryptBankDetails(plain);
+    }
+    if (this.isModified('phone') && this.phone) {
+        this.phone = encrypt(this.phone);
+    }
+    if (this.isModified('emergencyContact.phone') && this.emergencyContact && this.emergencyContact.phone) {
+        this.emergencyContact.phone = encrypt(this.emergencyContact.phone);
     }
 });
 
@@ -92,9 +104,21 @@ userSchema.pre(['findOneAndUpdate', 'updateOne', 'updateMany'], function () {
     if (update.bankDetails) {
         update.bankDetails = encryptBankDetails(update.bankDetails);
     }
+    if (update.phone) {
+        update.phone = encrypt(update.phone);
+    }
+    if (update.emergencyContact && update.emergencyContact.phone) {
+        update.emergencyContact.phone = encrypt(update.emergencyContact.phone);
+    }
     if (update.$set) {
         if (update.$set.bankDetails) {
             update.$set.bankDetails = encryptBankDetails(update.$set.bankDetails);
+        }
+        if (update.$set.phone) {
+            update.$set.phone = encrypt(update.$set.phone);
+        }
+        if (update.$set.emergencyContact && update.$set.emergencyContact.phone) {
+            update.$set.emergencyContact.phone = encrypt(update.$set.emergencyContact.phone);
         }
         // Dot-notation partial updates, e.g. { $set: { 'bankDetails.accountNumber': '...' } }
         for (const field of BANK_FIELDS) {
@@ -102,6 +126,9 @@ userSchema.pre(['findOneAndUpdate', 'updateOne', 'updateMany'], function () {
             if (update.$set[dotKey] !== undefined) {
                 update.$set[dotKey] = encrypt(update.$set[dotKey]);
             }
+        }
+        if (update.$set['emergencyContact.phone'] !== undefined) {
+            update.$set['emergencyContact.phone'] = encrypt(update.$set['emergencyContact.phone']);
         }
     }
 });
