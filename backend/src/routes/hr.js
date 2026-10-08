@@ -64,7 +64,11 @@ router.get('/attendance/status', attendanceController.getTodayStatus);
 // Attendance (View All)
 router.get('/attendance', adminController.getAttendanceRecords);
 
-// Payslips (Personal)
+// Payslips (Personal - HR's own payslip)
 router.get('/payslips', hrController.getHRPayslips);
+
+// Payslips (Team - all employees, HR can view + update status)
+router.get('/team-payslips', adminController.getAdminPayslips);
+router.patch('/team-payslips/:id', adminController.updatePayslip);
 
 module.exports = router;
